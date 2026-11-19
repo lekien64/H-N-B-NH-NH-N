@@ -26,9 +26,11 @@ jobs:
           /p:Configuration=Release
           /p:Platform="Any CPU"
 
+      
       - name: Upload build files
         uses: actions/upload-artifact@v4
         with:
           name: PatientAppointmentManager-v0.1-Windows
-          path: bin/Release/net48/
+          path: |
+            **/bin/Release/**
           if-no-files-found: error
