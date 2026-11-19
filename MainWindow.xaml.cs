@@ -21,7 +21,6 @@ namespace PatientAppointmentManager
             FromDatePicker.SelectedDate = DateTime.Today;
             ToDatePicker.SelectedDate = DateTime.Today.AddDays(30);
 
-            // Đồng bộ địa chỉ trình duyệt tab 1
             HospitalBrowser.FrameLoadEnd += (sender, args) =>
             {
                 if (args.Frame.IsMain)
@@ -33,7 +32,6 @@ namespace PatientAppointmentManager
                 }
             };
 
-            // Đồng bộ địa chỉ trình duyệt tab 2
             AddHospitalBrowser.FrameLoadEnd += (sender, args) =>
             {
                 if (args.Frame.IsMain)
@@ -81,7 +79,7 @@ namespace PatientAppointmentManager
         }
 
         // ==============================
-        // HÀM KIỂM TRA VÀ MỞ URL
+        // KIỂM TRA ĐỊA CHỈ WEBSITE
         // ==============================
 
         private bool TryGetWebAddress(string input, out string address)
@@ -118,7 +116,7 @@ namespace PatientAppointmentManager
             if (!TryGetWebAddress(UrlBox.Text, out address))
             {
                 MessageBox.Show(
-                    "Địa chỉ website không hợp lệ. Vui lòng nhập địa chỉ http:// hoặc https://.",
+                    "Địa chỉ website không hợp lệ.",
                     "Lỗi địa chỉ",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
@@ -146,7 +144,7 @@ namespace PatientAppointmentManager
         }
 
         // ==============================
-        // TRÌNH DUYỆT RIÊNG TAB 2
+        // TRÌNH DUYỆT TAB 2
         // ==============================
 
         private void AddOpenUrl_Click(object sender, RoutedEventArgs e)
@@ -156,7 +154,7 @@ namespace PatientAppointmentManager
             if (!TryGetWebAddress(AddUrlBox.Text, out address))
             {
                 MessageBox.Show(
-                    "Địa chỉ website không hợp lệ. Vui lòng nhập địa chỉ http:// hoặc https://.",
+                    "Địa chỉ website không hợp lệ.",
                     "Lỗi địa chỉ",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
@@ -209,14 +207,11 @@ namespace PatientAppointmentManager
                 return;
             }
 
-            // Kiểm tra lịch cũ trước khi thêm.
-            // Không tự động trả hoặc ghi đè lịch cũ.
             if (Database.HasActiveAppointment(code, exam))
             {
                 MessageBox.Show(
                     "Bệnh nhân đã có lịch hẹn đang hiệu lực.\n\n" +
-                    "Vui lòng vào tab Lịch đã hẹn để kiểm tra lịch cũ. " +
-                    "Chỉ thêm lịch mới sau khi đã quyết định giữ hoặc trả lịch cũ.",
+                    "Vui lòng kiểm tra lịch cũ trước khi thêm lịch mới.",
                     "Phát hiện lịch trùng",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
@@ -244,7 +239,7 @@ namespace PatientAppointmentManager
                 });
 
                 MessageBox.Show(
-                    "Đã thêm lịch hẹn thành công.\nDữ liệu được lưu trên máy tính.",
+                    "Đã thêm lịch hẹn thành công.",
                     "Thành công",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
@@ -255,16 +250,13 @@ namespace PatientAppointmentManager
                 ExamCodeBox.Clear();
 
                 ServiceBox.Text = "Chụp CLVT";
-
-                AppointmentDatePicker.SelectedDate =
-                    DateTime.Today.AddDays(1);
-
+                AppointmentDatePicker.SelectedDate = DateTime.Today.AddDays(1);
                 ShiftBox.SelectedIndex = 0;
             }
             catch (Exception ex)
             {
                 MessageBox.Show(
-                    "Không thể lưu lịch hẹn.\n\nChi tiết: " + ex.Message,
+                    "Không thể lưu lịch hẹn.\n\n" + ex.Message,
                     "Lỗi cơ sở dữ liệu",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
@@ -272,7 +264,7 @@ namespace PatientAppointmentManager
         }
 
         // ==============================
-        // TẢI DANH SÁCH LỊCH
+        // TẢI VÀ ĐẾM LỊCH
         // ==============================
 
         private void LoadAppointments()
@@ -283,8 +275,11 @@ namespace PatientAppointmentManager
             DateTime to =
                 ToDatePicker.SelectedDate ?? from;
 
-            if (to < from)
+            if (to.Date < from.Date)
             {
+                TotalCountText.Text = "0 ca";
+                ActiveCountText.Text = "0 ca";
+
                 MessageBox.Show(
                     "Ngày đến phải bằng hoặc sau ngày bắt đầu.",
                     "Khoảng ngày không hợp lệ",
@@ -304,14 +299,32 @@ namespace PatientAppointmentManager
             try
             {
                 DataTable data = Database.GetAppointments(
-                    from,
-                    to,
+                    from.Date,
+                    to.Date,
                     shift,
                     IncludeReturnedCheck.IsChecked == true);
 
                 AppointmentsGrid.ItemsSource = data.DefaultView;
 
-                CountText.Text = data.Rows.Count + " ca";
+                // Tổng số ca đang hiển thị sau khi áp dụng bộ lọc.
+                int totalCount = data.Rows.Count;
+
+                // Số ca còn hẹn, không tính lịch đã trả.
+                int activeCount = 0;
+
+                foreach (DataRow row in data.Rows)
+                {
+                    if (string.Equals(
+                        Convert.ToString(row["Trạng thái"]),
+                        "Đã hẹn",
+                        StringComparison.OrdinalIgnoreCase))
+                    {
+                        activeCount++;
+                    }
+                }
+
+                TotalCountText.Text = totalCount + " ca";
+                ActiveCountText.Text = activeCount + " ca";
             }
             catch (Exception ex)
             {
@@ -328,6 +341,16 @@ namespace PatientAppointmentManager
             LoadAppointments();
         }
 
+        // ComboBox và DatePicker dùng SelectionChangedEventArgs.
+        private void FilterSelection_Changed(
+            object sender,
+            SelectionChangedEventArgs e)
+        {
+            if (IsLoaded && FilterShiftBox.SelectedItem != null)
+                LoadAppointments();
+        }
+
+        // CheckBox dùng RoutedEventArgs.
         private void Filter_Changed(object sender, RoutedEventArgs e)
         {
             if (IsLoaded && FilterShiftBox.SelectedItem != null)
@@ -386,7 +409,6 @@ namespace PatientAppointmentManager
                 long id = Convert.ToInt64(view["Id"]);
 
                 Database.Return(id);
-
                 LoadAppointments();
 
                 MessageBox.Show(
