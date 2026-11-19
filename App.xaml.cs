@@ -16,7 +16,7 @@ namespace PatientAppointmentManager
 
             Directory.CreateDirectory(cacheFolder);
 
-            var settings = new CefSettings
+            var settings = new CefSharp.Wpf.CefSettings
             {
                 CachePath = cacheFolder,
                 LogSeverity = LogSeverity.Warning,
