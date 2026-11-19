@@ -65,7 +65,7 @@ CREATE TABLE IF NOT EXISTS AuditLog(
                     cmd.ExecuteNonQuery();
                 }
 
-                // Tự nâng cấp database cũ, không xóa dữ liệu.
+                // Nâng cấp database cũ mà không xóa dữ liệu.
                 if (!ColumnExists(c, "Appointments", "Department"))
                 {
                     using (var cmd = c.CreateCommand())
@@ -196,8 +196,7 @@ VALUES
                         "@s", a.ServiceName ?? "");
 
                     cmd.Parameters.AddWithValue(
-                        "@d",
-                        a.AppointmentDate.ToString("yyyy-MM-dd"));
+                        "@d", a.AppointmentDate.ToString("yyyy-MM-dd"));
 
                     cmd.Parameters.AddWithValue(
                         "@h", a.Shift ?? "");
@@ -206,7 +205,6 @@ VALUES
                         "@now", DateTime.Now.ToString("s"));
 
                     cmd.ExecuteNonQuery();
-
                     tx.Commit();
                 }
             }
@@ -227,7 +225,7 @@ VALUES
                 using (var da = new SQLiteDataAdapter())
                 using (var cmd = c.CreateCommand())
                 {
-                    cmd.CommandText = @"
+                    string sql = @"
 SELECT
     Id,
     PatientCode AS 'Mã BN',
@@ -236,29 +234,47 @@ SELECT
     ExamCode AS 'Mã chỉ định',
     ServiceName AS 'Dịch vụ',
     AppointmentDate AS 'Ngày hẹn',
-    Shift AS 'Buổi',
+    TRIM(Shift) AS 'Buổi',
     Status AS 'Trạng thái'
 FROM Appointments
 WHERE AppointmentDate >= @from
-AND AppointmentDate <= @to
-AND (@shift = 'Cả ngày' OR Shift = @shift)
-AND (@returned = 1 OR Status = 'Đã hẹn')
+AND AppointmentDate < @toExclusive";
+
+                    if (!string.IsNullOrWhiteSpace(shift) &&
+                        shift != "Cả ngày")
+                    {
+                        sql += " AND TRIM(Shift) = @shift";
+
+                        cmd.Parameters.AddWithValue(
+                            "@shift", shift.Trim());
+                    }
+
+                    if (!includeReturned)
+                    {
+                        sql += " AND Status = 'Đã hẹn'";
+                    }
+
+                    sql += @"
 ORDER BY
     AppointmentDate,
-    CASE Shift WHEN 'Sáng' THEN 0 ELSE 1 END,
+    CASE TRIM(Shift)
+        WHEN 'Sáng' THEN 0
+        WHEN 'Chiều' THEN 1
+        ELSE 2
+    END,
     Id DESC";
 
-                    cmd.Parameters.AddWithValue(
-                        "@from", from.ToString("yyyy-MM-dd"));
+                    cmd.CommandText = sql;
 
                     cmd.Parameters.AddWithValue(
-                        "@to", to.ToString("yyyy-MM-dd"));
+                        "@from",
+                        from.Date.ToString("yyyy-MM-dd"));
 
+                    // Dùng ngày kế tiếp làm mốc loại trừ.
+                    // Ví dụ 19-20 sẽ không lấy ngày 21.
                     cmd.Parameters.AddWithValue(
-                        "@shift", shift ?? "Cả ngày");
-
-                    cmd.Parameters.AddWithValue(
-                        "@returned", includeReturned ? 1 : 0);
+                        "@toExclusive",
+                        to.Date.AddDays(1).ToString("yyyy-MM-dd"));
 
                     da.SelectCommand = cmd;
                     da.Fill(table);
@@ -291,7 +307,14 @@ AND Status = 'Đã hẹn'";
 
                     cmd.Parameters.AddWithValue("@id", id);
 
-                    cmd.ExecuteNonQuery();
+                    int affected = cmd.ExecuteNonQuery();
+
+                    if (affected == 0)
+                    {
+                        tx.Rollback();
+                        throw new InvalidOperationException(
+                            "Lịch không tồn tại hoặc đã được trả trước đó.");
+                    }
 
                     using (var log = c.CreateCommand())
                     {
