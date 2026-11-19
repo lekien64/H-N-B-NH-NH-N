@@ -11,8 +11,7 @@ namespace PatientAppointmentManager.Data
     {
         private static readonly string Folder =
             Path.Combine(
-                Environment.GetFolderPath(
-                    Environment.SpecialFolder.LocalApplicationData),
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "PatientAppointmentManager");
 
         private static readonly string DbPath =
@@ -65,15 +64,12 @@ CREATE TABLE IF NOT EXISTS AuditLog(
                     cmd.ExecuteNonQuery();
                 }
 
-                // Nâng cấp database cũ mà không xóa dữ liệu.
                 if (!ColumnExists(c, "Appointments", "Department"))
                 {
                     using (var cmd = c.CreateCommand())
                     {
                         cmd.CommandText =
-                            "ALTER TABLE Appointments " +
-                            "ADD COLUMN Department TEXT NOT NULL DEFAULT ''";
-
+                            "ALTER TABLE Appointments ADD COLUMN Department TEXT NOT NULL DEFAULT ''";
                         cmd.ExecuteNonQuery();
                     }
                 }
@@ -87,23 +83,17 @@ CREATE TABLE IF NOT EXISTS AuditLog(
         {
             using (var cmd = connection.CreateCommand())
             {
-                cmd.CommandText =
-                    "PRAGMA table_info(" + tableName + ")";
+                cmd.CommandText = "PRAGMA table_info(" + tableName + ")";
 
                 using (var reader = cmd.ExecuteReader())
                 {
                     while (reader.Read())
                     {
-                        string name =
-                            Convert.ToString(reader["name"]);
-
                         if (string.Equals(
-                            name,
+                            Convert.ToString(reader["name"]),
                             columnName,
                             StringComparison.OrdinalIgnoreCase))
-                        {
                             return true;
-                        }
                     }
                 }
             }
@@ -128,14 +118,10 @@ WHERE PatientCode = @p
 AND Status = 'Đã hẹn'
 AND (@e = '' OR ExamCode = @e)";
 
-                    cmd.Parameters.AddWithValue(
-                        "@p", patientCode ?? "");
+                    cmd.Parameters.AddWithValue("@p", patientCode ?? "");
+                    cmd.Parameters.AddWithValue("@e", examCode ?? "");
 
-                    cmd.Parameters.AddWithValue(
-                        "@e", examCode ?? "");
-
-                    return Convert.ToInt32(
-                        cmd.ExecuteScalar()) > 0;
+                    return Convert.ToInt32(cmd.ExecuteScalar()) > 0;
                 }
             }
         }
@@ -157,52 +143,25 @@ AND (@e = '' OR ExamCode = @e)";
                     cmd.CommandText = @"
 INSERT INTO Appointments
 (
-    PatientCode,
-    PatientName,
-    Department,
-    ExamCode,
-    ServiceName,
-    AppointmentDate,
-    Shift,
-    Status,
-    CreatedAt
+    PatientCode, PatientName, Department,
+    ExamCode, ServiceName, AppointmentDate,
+    Shift, Status, CreatedAt
 )
 VALUES
 (
-    @p,
-    @n,
-    @department,
-    @e,
-    @s,
-    @d,
-    @h,
-    'Đã hẹn',
-    @now
+    @p, @n, @department,
+    @e, @s, @d,
+    @h, 'Đã hẹn', @now
 )";
 
-                    cmd.Parameters.AddWithValue(
-                        "@p", a.PatientCode ?? "");
-
-                    cmd.Parameters.AddWithValue(
-                        "@n", a.PatientName ?? "");
-
-                    cmd.Parameters.AddWithValue(
-                        "@department", a.Department ?? "");
-
-                    cmd.Parameters.AddWithValue(
-                        "@e", a.ExamCode ?? "");
-
-                    cmd.Parameters.AddWithValue(
-                        "@s", a.ServiceName ?? "");
-
-                    cmd.Parameters.AddWithValue(
-                        "@d", a.AppointmentDate.ToString("yyyy-MM-dd"));
-
-                    cmd.Parameters.AddWithValue(
-                        "@h", a.Shift ?? "");
-
-                    cmd.Parameters.AddWithValue(
-                        "@now", DateTime.Now.ToString("s"));
+                    cmd.Parameters.AddWithValue("@p", a.PatientCode ?? "");
+                    cmd.Parameters.AddWithValue("@n", a.PatientName ?? "");
+                    cmd.Parameters.AddWithValue("@department", a.Department ?? "");
+                    cmd.Parameters.AddWithValue("@e", a.ExamCode ?? "");
+                    cmd.Parameters.AddWithValue("@s", a.ServiceName ?? "");
+                    cmd.Parameters.AddWithValue("@d", a.AppointmentDate.ToString("yyyy-MM-dd"));
+                    cmd.Parameters.AddWithValue("@h", a.Shift ?? "");
+                    cmd.Parameters.AddWithValue("@now", DateTime.Now.ToString("s"));
 
                     cmd.ExecuteNonQuery();
                     tx.Commit();
@@ -210,11 +169,44 @@ VALUES
             }
         }
 
+        // Phân loại tiêm dựa trên tên dịch vụ.
+        private static bool IsInjectionService(string serviceName)
+        {
+            string name = serviceName ?? "";
+
+            bool explicitlyNoInjection =
+                name.IndexOf("không tiêm", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                name.IndexOf("khong tiem", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                name.IndexOf("không sử dụng thuốc cản quang", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                name.IndexOf("không dùng thuốc cản quang", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                name.IndexOf("khong su dung thuoc can quang", StringComparison.OrdinalIgnoreCase) >= 0;
+
+            if (explicitlyNoInjection)
+                return false;
+
+            return
+                name.IndexOf("tiêm", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                name.IndexOf("tiem", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static bool IsExplicitlyNoInjection(string serviceName)
+        {
+            string name = serviceName ?? "";
+
+            return
+                name.IndexOf("không tiêm", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                name.IndexOf("khong tiem", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                name.IndexOf("không sử dụng thuốc cản quang", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                name.IndexOf("không dùng thuốc cản quang", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                name.IndexOf("khong su dung thuoc can quang", StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
         public static DataTable GetAppointments(
             DateTime from,
             DateTime to,
             string shift,
-            bool includeReturned)
+            bool includeReturned,
+            string injectionFilter)
         {
             var table = new DataTable();
 
@@ -240,19 +232,14 @@ FROM Appointments
 WHERE AppointmentDate >= @from
 AND AppointmentDate < @toExclusive";
 
-                    if (!string.IsNullOrWhiteSpace(shift) &&
-                        shift != "Cả ngày")
+                    if (!string.IsNullOrWhiteSpace(shift) && shift != "Cả ngày")
                     {
                         sql += " AND TRIM(Shift) = @shift";
-
-                        cmd.Parameters.AddWithValue(
-                            "@shift", shift.Trim());
+                        cmd.Parameters.AddWithValue("@shift", shift.Trim());
                     }
 
                     if (!includeReturned)
-                    {
                         sql += " AND Status = 'Đã hẹn'";
-                    }
 
                     sql += @"
 ORDER BY
@@ -267,21 +254,39 @@ ORDER BY
                     cmd.CommandText = sql;
 
                     cmd.Parameters.AddWithValue(
-                        "@from",
-                        from.Date.ToString("yyyy-MM-dd"));
+                        "@from", from.Date.ToString("yyyy-MM-dd"));
 
-                    // Dùng ngày kế tiếp làm mốc loại trừ.
-                    // Ví dụ 19-20 sẽ không lấy ngày 21.
                     cmd.Parameters.AddWithValue(
-                        "@toExclusive",
-                        to.Date.AddDays(1).ToString("yyyy-MM-dd"));
+                        "@toExclusive", to.Date.AddDays(1).ToString("yyyy-MM-dd"));
 
                     da.SelectCommand = cmd;
                     da.Fill(table);
                 }
             }
 
-            return table;
+            // Lọc tiêm sau khi lấy dữ liệu từ SQLite.
+            // Cách này hỗ trợ chữ tiếng Việt có dấu và không dấu.
+            if (string.IsNullOrWhiteSpace(injectionFilter) ||
+                injectionFilter == "Tất cả")
+                return table;
+
+            DataTable filtered = table.Clone();
+
+            foreach (DataRow row in table.Rows)
+            {
+                string service = Convert.ToString(row["Dịch vụ"]);
+
+                bool isInjection = IsInjectionService(service);
+                bool isNoInjection = IsExplicitlyNoInjection(service);
+
+                if (injectionFilter == "Có tiêm" && isInjection)
+                    filtered.ImportRow(row);
+
+                else if (injectionFilter == "Không tiêm" && isNoInjection)
+                    filtered.ImportRow(row);
+            }
+
+            return filtered;
         }
 
         public static void Return(long id)
@@ -302,9 +307,7 @@ SET Status = 'Đã trả lịch',
 WHERE Id = @id
 AND Status = 'Đã hẹn'";
 
-                    cmd.Parameters.AddWithValue(
-                        "@now", DateTime.Now.ToString("s"));
-
+                    cmd.Parameters.AddWithValue("@now", DateTime.Now.ToString("s"));
                     cmd.Parameters.AddWithValue("@id", id);
 
                     int affected = cmd.ExecuteNonQuery();
@@ -327,10 +330,7 @@ VALUES
 (@id, 'Trả lịch', @now)";
 
                         log.Parameters.AddWithValue("@id", id);
-
-                        log.Parameters.AddWithValue(
-                            "@now", DateTime.Now.ToString("s"));
-
+                        log.Parameters.AddWithValue("@now", DateTime.Now.ToString("s"));
                         log.ExecuteNonQuery();
                     }
 
