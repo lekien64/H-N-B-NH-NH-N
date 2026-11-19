@@ -26,11 +26,45 @@ jobs:
           /p:Configuration=Release
           /p:Platform="Any CPU"
 
-      
+      - name: Locate and collect build files
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem `
+            -Path $env:GITHUB_WORKSPACE `
+            -Recurse `
+            -File `
+            -Filter "PatientAppointmentManager.exe" |
+            Where-Object {
+              $_.FullName -notmatch '[\\/](obj|\.git)[\\/]'
+            } |
+            Select-Object -First 1
+
+          if (-not $exe) {
+            Write-Host "Cannot find PatientAppointmentManager.exe"
+            Write-Host "Listing generated files:"
+            Get-ChildItem -Path $env:GITHUB_WORKSPACE -Recurse -File |
+              Select-Object -ExpandProperty FullName
+            throw "Build output executable was not found."
+          }
+
+          Write-Host "Found executable: $($exe.FullName)"
+
+          $publish = Join-Path $env:GITHUB_WORKSPACE "publish"
+          New-Item -ItemType Directory -Force -Path $publish | Out-Null
+
+          Copy-Item `
+            -Path (Join-Path $exe.DirectoryName '*') `
+            -Destination $publish `
+            -Recurse `
+            -Force
+
+          Write-Host "Collected build files:"
+          Get-ChildItem -Path $publish -Recurse -File |
+            Select-Object -ExpandProperty FullName
+
       - name: Upload build files
         uses: actions/upload-artifact@v4
         with:
           name: PatientAppointmentManager-v0.1-Windows
-          path: |
-            **/bin/Release/**
+          path: publish/
           if-no-files-found: error
