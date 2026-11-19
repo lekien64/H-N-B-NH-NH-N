@@ -6,6 +6,7 @@
  Title="Patient Appointment Manager" Height="800" Width="1300"
  MinHeight="680" MinWidth="1050" WindowStartupLocation="CenterScreen"
  Background="#F3F6F8">
+
  <Grid>
   <Grid.ColumnDefinitions>
    <ColumnDefinition Width="205"/>
@@ -18,12 +19,18 @@
      <TextBlock Text="PATIENT" Foreground="White" FontSize="21" FontWeight="Bold"/>
      <TextBlock Text="APPOINTMENT MANAGER" Foreground="#9BB8BE" FontSize="10" Margin="0,2,0,0"/>
     </StackPanel>
+
     <StackPanel>
      <Button Content="🌐  Trình duyệt" Click="BrowserTab_Click" Style="{StaticResource NavButton}"/>
      <Button Content="＋  Thêm lịch" Click="AddTab_Click" Style="{StaticResource NavButton}"/>
      <Button Content="▦  Lịch đã hẹn" Click="ListTab_Click" Style="{StaticResource NavButton}"/>
     </StackPanel>
-    <TextBlock DockPanel.Dock="Bottom" Text="Dữ liệu lưu trên máy tính" Foreground="#9BB8BE" FontSize="10" Margin="18,16"/>
+
+    <TextBlock DockPanel.Dock="Bottom"
+               Text="Dữ liệu lưu trên máy tính"
+               Foreground="#9BB8BE"
+               FontSize="10"
+               Margin="18,16"/>
    </DockPanel>
   </Border>
 
@@ -38,8 +45,13 @@
     </Grid.RowDefinitions>
 
     <StackPanel Grid.Row="0">
-     <TextBlock Text="Trình duyệt bệnh viện" FontSize="26" FontWeight="SemiBold" Foreground="#18333D"/>
-     <TextBlock Text="Đăng nhập thủ công. Ứng dụng không lưu mật khẩu website." Foreground="#637780" Margin="0,6,0,14"/>
+     <TextBlock Text="Trình duyệt bệnh viện"
+                FontSize="26"
+                FontWeight="SemiBold"
+                Foreground="#18333D"/>
+     <TextBlock Text="Đăng nhập thủ công. Ứng dụng không lưu mật khẩu website."
+                Foreground="#637780"
+                Margin="0,6,0,14"/>
     </StackPanel>
 
     <DockPanel Grid.Row="1" Margin="0,0,0,12">
@@ -48,16 +60,27 @@
       <Button Content="→" Width="38" Height="36" Margin="0,0,5,0" Click="Forward_Click"/>
       <Button Content="↻" Width="38" Height="36" Margin="0,0,8,0" Click="Reload_Click"/>
      </StackPanel>
+
      <Button Content="Mở" Width="76" Height="36" DockPanel.Dock="Right" Click="OpenUrl_Click"/>
-     <TextBox x:Name="UrlBox" Height="36" Padding="10" Text="https://" VerticalContentAlignment="Center"/>
+
+     <TextBox x:Name="UrlBox"
+              Height="36"
+              Padding="10"
+              Text="https://"
+              VerticalContentAlignment="Center"/>
     </DockPanel>
 
-    <Border Grid.Row="2" Background="White" CornerRadius="8" BorderBrush="#DCE5E8" BorderThickness="1" ClipToBounds="True">
+    <Border Grid.Row="2"
+            Background="White"
+            CornerRadius="8"
+            BorderBrush="#DCE5E8"
+            BorderThickness="1"
+            ClipToBounds="True">
      <cef:ChromiumWebBrowser x:Name="HospitalBrowser" Address="about:blank"/>
     </Border>
    </Grid>
 
-   <!-- TAB 2: TRÌNH DUYỆT RIÊNG VÀ NHẬP LỊCH -->
+   <!-- TAB 2: THÊM LỊCH -->
    <Grid x:Name="AddView" Visibility="Collapsed">
     <Grid.RowDefinitions>
      <RowDefinition Height="Auto"/>
@@ -67,8 +90,13 @@
     </Grid.RowDefinitions>
 
     <StackPanel Grid.Row="0">
-     <TextBlock Text="Thêm lịch hẹn" FontSize="26" FontWeight="SemiBold" Foreground="#18333D"/>
-     <TextBlock Text="Mở website riêng hoặc nhập thông tin bệnh nhân thủ công." Foreground="#637780" Margin="0,6,0,12"/>
+     <TextBlock Text="Thêm lịch hẹn"
+                FontSize="26"
+                FontWeight="SemiBold"
+                Foreground="#18333D"/>
+     <TextBlock Text="Mở website riêng hoặc nhập thông tin bệnh nhân thủ công."
+                Foreground="#637780"
+                Margin="0,6,0,12"/>
     </StackPanel>
 
     <Grid Grid.Row="1" MinHeight="220">
@@ -78,7 +106,10 @@
       <RowDefinition Height="*"/>
      </Grid.RowDefinitions>
 
-     <TextBlock Grid.Row="0" Text="Trình duyệt lấy dữ liệu bệnh viện" FontWeight="SemiBold" Margin="0,0,0,8"/>
+     <TextBlock Grid.Row="0"
+                Text="Trình duyệt lấy dữ liệu bệnh viện"
+                FontWeight="SemiBold"
+                Margin="0,0,0,8"/>
 
      <DockPanel Grid.Row="1" Margin="0,0,0,8">
       <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
@@ -86,11 +117,22 @@
        <Button Content="→" Width="34" Height="32" Margin="0,0,4,0" Click="AddForward_Click"/>
        <Button Content="↻" Width="34" Height="32" Margin="0,0,7,0" Click="AddReload_Click"/>
       </StackPanel>
+
       <Button Content="Mở" Width="65" Height="32" DockPanel.Dock="Right" Click="AddOpenUrl_Click"/>
-      <TextBox x:Name="AddUrlBox" Height="32" Padding="8" Text="https://" VerticalContentAlignment="Center"/>
+
+      <TextBox x:Name="AddUrlBox"
+               Height="32"
+               Padding="8"
+               Text="https://"
+               VerticalContentAlignment="Center"/>
      </DockPanel>
 
-     <Border Grid.Row="2" Background="White" CornerRadius="8" BorderBrush="#DCE5E8" BorderThickness="1" ClipToBounds="True">
+     <Border Grid.Row="2"
+             Background="White"
+             CornerRadius="8"
+             BorderBrush="#DCE5E8"
+             BorderThickness="1"
+             ClipToBounds="True">
       <cef:ChromiumWebBrowser x:Name="AddHospitalBrowser" Address="about:blank"/>
      </Border>
     </Grid>
@@ -100,7 +142,11 @@
     <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
      <Border Background="White" CornerRadius="10" Padding="18">
       <StackPanel>
-       <TextBlock Text="NHẬP LỊCH THỦ CÔNG" FontSize="17" FontWeight="Bold" Foreground="#18333D" Margin="0,0,0,14"/>
+       <TextBlock Text="NHẬP LỊCH THỦ CÔNG"
+                  FontSize="17"
+                  FontWeight="Bold"
+                  Foreground="#18333D"
+                  Margin="0,0,0,14"/>
 
        <UniformGrid Columns="2">
         <StackPanel Margin="0,0,12,10">
@@ -136,16 +182,24 @@
 
        <StackPanel Margin="0,0,0,8">
         <TextBlock Text="Buổi hẹn"/>
-        <ComboBox x:Name="ShiftBox" Height="34" Width="180" HorizontalAlignment="Left">
+        <ComboBox x:Name="ShiftBox"
+                  Height="34"
+                  Width="180"
+                  HorizontalAlignment="Left">
          <ComboBoxItem Content="Sáng" IsSelected="True"/>
          <ComboBoxItem Content="Chiều"/>
         </ComboBox>
        </StackPanel>
 
-       <Button Content="XÁC NHẬN THÊM LỊCH" Height="42" Width="220"
-        HorizontalAlignment="Left" Margin="0,12,0,0"
-        Background="#147D78" Foreground="White"
-        FontWeight="SemiBold" Click="AddAppointment_Click"/>
+       <Button Content="XÁC NHẬN THÊM LỊCH"
+               Height="42"
+               Width="220"
+               HorizontalAlignment="Left"
+               Margin="0,12,0,0"
+               Background="#147D78"
+               Foreground="White"
+               FontWeight="SemiBold"
+               Click="AddAppointment_Click"/>
       </StackPanel>
      </Border>
     </ScrollViewer>
@@ -162,25 +216,46 @@
     </Grid.RowDefinitions>
 
     <StackPanel Grid.Row="0">
-     <TextBlock Text="Lịch đã hẹn" FontSize="26" FontWeight="SemiBold" Foreground="#18333D"/>
-     <TextBlock Text="Tra cứu, lọc và kiểm soát số ca đã xếp lịch." Foreground="#637780" Margin="0,6,0,18"/>
+     <TextBlock Text="Lịch đã hẹn"
+                FontSize="26"
+                FontWeight="SemiBold"
+                Foreground="#18333D"/>
+     <TextBlock Text="Tra cứu, lọc và kiểm soát số ca đã xếp lịch."
+                Foreground="#637780"
+                Margin="0,6,0,18"/>
     </StackPanel>
 
-    <Border Grid.Row="1" Background="White" CornerRadius="10" Padding="16" Margin="0,0,0,14">
+    <!-- BỘ LỌC -->
+    <Border Grid.Row="1"
+            Background="White"
+            CornerRadius="10"
+            Padding="16"
+            Margin="0,0,0,14">
      <StackPanel>
-      <TextBlock Text="Bộ lọc" FontWeight="SemiBold" Margin="0,0,0,10"/>
+      <TextBlock Text="Bộ lọc"
+                 FontWeight="SemiBold"
+                 Margin="0,0,0,10"/>
+
       <UniformGrid Columns="3">
        <StackPanel Margin="0,0,12,0">
         <TextBlock Text="Từ ngày"/>
-        <DatePicker x:Name="FromDatePicker" Height="34"/>
+        <DatePicker x:Name="FromDatePicker"
+                    Height="34"
+                    SelectedDateChanged="FilterSelection_Changed"/>
        </StackPanel>
+
        <StackPanel Margin="0,0,12,0">
         <TextBlock Text="Đến ngày"/>
-        <DatePicker x:Name="ToDatePicker" Height="34"/>
+        <DatePicker x:Name="ToDatePicker"
+                    Height="34"
+                    SelectedDateChanged="FilterSelection_Changed"/>
        </StackPanel>
+
        <StackPanel>
         <TextBlock Text="Buổi"/>
-        <ComboBox x:Name="FilterShiftBox" Height="34" SelectionChanged="Filter_Changed">
+        <ComboBox x:Name="FilterShiftBox"
+                  Height="34"
+                  SelectionChanged="FilterSelection_Changed">
          <ComboBoxItem Content="Cả ngày" IsSelected="True"/>
          <ComboBoxItem Content="Sáng"/>
          <ComboBoxItem Content="Chiều"/>
@@ -188,23 +263,86 @@
        </StackPanel>
       </UniformGrid>
 
-      <CheckBox x:Name="IncludeReturnedCheck" Content="Hiển thị cả lịch đã trả" Margin="0,12,0,0" Checked="Filter_Changed" Unchecked="Filter_Changed"/>
-      <Button Content="Áp dụng bộ lọc" Width="145" Height="34" HorizontalAlignment="Left" Margin="0,12,0,0" Click="Refresh_Click"/>
+      <CheckBox x:Name="IncludeReturnedCheck"
+                Content="Hiển thị cả lịch đã trả"
+                Margin="0,12,0,0"
+                Checked="Filter_Changed"
+                Unchecked="Filter_Changed"/>
+
+      <Button Content="Áp dụng bộ lọc"
+              Width="145"
+              Height="34"
+              HorizontalAlignment="Left"
+              Margin="0,12,0,0"
+              Click="Refresh_Click"/>
      </StackPanel>
     </Border>
 
-    <Border Grid.Row="2" Background="#E5F2F0" CornerRadius="9" Padding="16" Margin="0,0,0,14">
-     <StackPanel Orientation="Horizontal">
-      <TextBlock Text="Tổng số ca trong danh sách: " FontWeight="SemiBold" Foreground="#24514D"/>
-      <TextBlock x:Name="CountText" Text="0 ca" FontWeight="Bold" Foreground="#147D78" FontSize="17"/>
-     </StackPanel>
+    <!-- HAI BỘ ĐẾM -->
+    <Border Grid.Row="2"
+            Background="#E5F2F0"
+            CornerRadius="9"
+            Padding="16"
+            Margin="0,0,0,14">
+     <Grid>
+      <Grid.ColumnDefinitions>
+       <ColumnDefinition Width="*"/>
+       <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
+
+      <StackPanel Grid.Column="0">
+       <TextBlock Text="TỔNG SỐ CA"
+                  FontSize="11"
+                  FontWeight="SemiBold"
+                  Foreground="#526C70"/>
+       <TextBlock x:Name="TotalCountText"
+                  Text="0 ca"
+                  FontSize="22"
+                  FontWeight="Bold"
+                  Foreground="#24514D"/>
+      </StackPanel>
+
+      <StackPanel Grid.Column="1">
+       <TextBlock Text="SỐ CA CÒN HẸN"
+                  FontSize="11"
+                  FontWeight="SemiBold"
+                  Foreground="#526C70"/>
+       <TextBlock x:Name="ActiveCountText"
+                  Text="0 ca"
+                  FontSize="22"
+                  FontWeight="Bold"
+                  Foreground="#147D78"/>
+      </StackPanel>
+     </Grid>
     </Border>
 
-    <DataGrid x:Name="AppointmentsGrid" Grid.Row="3" AutoGenerateColumns="True" IsReadOnly="True" CanUserAddRows="False" Background="White" BorderBrush="#DCE5E8" HeadersVisibility="Column" RowHeight="34"/>
+    <!-- DANH SÁCH -->
+    <DataGrid x:Name="AppointmentsGrid"
+              Grid.Row="3"
+              AutoGenerateColumns="True"
+              IsReadOnly="True"
+              CanUserAddRows="False"
+              Background="White"
+              BorderBrush="#DCE5E8"
+              HeadersVisibility="Column"
+              RowHeight="34"/>
 
-    <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
-     <Button Content="Trả lịch đã chọn" Width="145" Height="36" Background="#A43D3D" Foreground="White" Click="ReturnAppointment_Click"/>
-     <Button Content="Làm mới" Width="100" Height="36" Margin="10,0,0,0" Click="Refresh_Click"/>
+    <StackPanel Grid.Row="4"
+                Orientation="Horizontal"
+                HorizontalAlignment="Right"
+                Margin="0,12,0,0">
+     <Button Content="Trả lịch đã chọn"
+             Width="145"
+             Height="36"
+             Background="#A43D3D"
+             Foreground="White"
+             Click="ReturnAppointment_Click"/>
+
+     <Button Content="Làm mới"
+             Width="100"
+             Height="36"
+             Margin="10,0,0,0"
+             Click="Refresh_Click"/>
     </StackPanel>
    </Grid>
   </Grid>
