@@ -1,158 +1,212 @@
-using System;
-using System.Data;
-using System.Windows;
-using System.Windows.Controls;
-using CefSharp;
-using PatientAppointmentManager.Data;
-using PatientAppointmentManager.Models;
 
-namespace PatientAppointmentManager
-{
-    public partial class MainWindow : Window
-    {
-        public MainWindow()
-        {
-            InitializeComponent();
-            Database.Initialize();
-            AppointmentDatePicker.SelectedDate = DateTime.Today.AddDays(1);
-            FromDatePicker.SelectedDate = DateTime.Today;
-            ToDatePicker.SelectedDate = DateTime.Today.AddDays(30);
+<Window x:Class="PatientAppointmentManager.MainWindow"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ xmlns:cef="clr-namespace:CefSharp.Wpf;assembly=CefSharp.Wpf"
+ Title="Patient Appointment Manager" Height="800" Width="1300"
+ MinHeight="680" MinWidth="1050" WindowStartupLocation="CenterScreen"
+ Background="#F3F6F8">
+ <Grid>
+  <Grid.ColumnDefinitions>
+   <ColumnDefinition Width="205"/>
+   <ColumnDefinition Width="*"/>
+  </Grid.ColumnDefinitions>
 
-            HospitalBrowser.FrameLoadEnd += (sender, args) =>
-            {
-                if (args.Frame.IsMain)
-                {
-                    Dispatcher.BeginInvoke(new Action(() =>
-                    {
-                        UrlBox.Text = args.Url;
-                    }));
-                }
-            };
-        }
+  <Border Grid.Column="0" Background="#142B35">
+   <DockPanel>
+    <StackPanel DockPanel.Dock="Top" Margin="18,24,18,28">
+     <TextBlock Text="PATIENT" Foreground="White" FontSize="21" FontWeight="Bold"/>
+     <TextBlock Text="APPOINTMENT MANAGER" Foreground="#9BB8BE" FontSize="10" Margin="0,2,0,0"/>
+    </StackPanel>
+    <StackPanel>
+     <Button Content="🌐  Trình duyệt" Click="BrowserTab_Click" Style="{StaticResource NavButton}"/>
+     <Button Content="＋  Thêm lịch" Click="AddTab_Click" Style="{StaticResource NavButton}"/>
+     <Button Content="▦  Lịch đã hẹn" Click="ListTab_Click" Style="{StaticResource NavButton}"/>
+    </StackPanel>
+    <TextBlock DockPanel.Dock="Bottom" Text="Dữ liệu lưu trên máy tính" Foreground="#9BB8BE" FontSize="10" Margin="18,16"/>
+   </DockPanel>
+  </Border>
 
-        private void ShowView(string name)
-        {
-            BrowserView.Visibility = name == "browser" ? Visibility.Visible : Visibility.Collapsed;
-            AddView.Visibility = name == "add" ? Visibility.Visible : Visibility.Collapsed;
-            ListView.Visibility = name == "list" ? Visibility.Visible : Visibility.Collapsed;
-            if (name == "list") LoadAppointments();
-        }
+  <Grid Grid.Column="1" Margin="22">
 
-        private void BrowserTab_Click(object sender, RoutedEventArgs e) { ShowView("browser"); }
-        private void AddTab_Click(object sender, RoutedEventArgs e) { ShowView("add"); }
-        private void ListTab_Click(object sender, RoutedEventArgs e) { ShowView("list"); }
+   <!-- TAB 1: TRÌNH DUYỆT -->
+   <Grid x:Name="BrowserView" Visibility="Visible">
+    <Grid.RowDefinitions>
+     <RowDefinition Height="Auto"/>
+     <RowDefinition Height="Auto"/>
+     <RowDefinition Height="*"/>
+    </Grid.RowDefinitions>
 
-        private void OpenUrl_Click(object sender, RoutedEventArgs e)
-        {
-            var address = (UrlBox.Text ?? "").Trim();
-            if (address.Length == 0) return;
-            if (!address.Contains("://")) address = "https://" + address;
+    <StackPanel Grid.Row="0">
+     <TextBlock Text="Trình duyệt bệnh viện" FontSize="26" FontWeight="SemiBold" Foreground="#18333D"/>
+     <TextBlock Text="Đăng nhập thủ công. Ứng dụng không lưu mật khẩu website." Foreground="#637780" Margin="0,6,0,14"/>
+    </StackPanel>
 
-            Uri uri;
-            if (!Uri.TryCreate(address, UriKind.Absolute, out uri) ||
-                (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
-            {
-                MessageBox.Show("Chỉ hỗ trợ địa chỉ website bắt đầu bằng http:// hoặc https://.",
-                    "Địa chỉ không hợp lệ", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
+    <DockPanel Grid.Row="1" Margin="0,0,0,12">
+     <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+      <Button Content="←" Width="38" Height="36" Margin="0,0,5,0" Click="Back_Click"/>
+      <Button Content="→" Width="38" Height="36" Margin="0,0,5,0" Click="Forward_Click"/>
+      <Button Content="↻" Width="38" Height="36" Margin="0,0,8,0" Click="Reload_Click"/>
+     </StackPanel>
+     <Button Content="Mở" Width="76" Height="36" DockPanel.Dock="Right" Click="OpenUrl_Click"/>
+     <TextBox x:Name="UrlBox" Height="36" Padding="10" Text="https://" VerticalContentAlignment="Center"/>
+    </DockPanel>
 
-            HospitalBrowser.Address = uri.AbsoluteUri;
-        }
+    <Border Grid.Row="2" Background="White" CornerRadius="8" BorderBrush="#DCE5E8" BorderThickness="1" ClipToBounds="True">
+     <cef:ChromiumWebBrowser x:Name="HospitalBrowser" Address="about:blank"/>
+    </Border>
+   </Grid>
 
-        private void Back_Click(object sender, RoutedEventArgs e)
-        {
-            if (HospitalBrowser.CanGoBack) HospitalBrowser.Back();
-        }
+   <!-- TAB 2: TRÌNH DUYỆT RIÊNG VÀ NHẬP LỊCH -->
+   <Grid x:Name="AddView" Visibility="Collapsed">
+    <Grid.RowDefinitions>
+     <RowDefinition Height="Auto"/>
+     <RowDefinition Height="2*"/>
+     <RowDefinition Height="Auto"/>
+     <RowDefinition Height="3*"/>
+    </Grid.RowDefinitions>
 
-        private void Forward_Click(object sender, RoutedEventArgs e)
-        {
-            if (HospitalBrowser.CanGoForward) HospitalBrowser.Forward();
-        }
+    <StackPanel Grid.Row="0">
+     <TextBlock Text="Thêm lịch hẹn" FontSize="26" FontWeight="SemiBold" Foreground="#18333D"/>
+     <TextBlock Text="Mở website riêng hoặc nhập thông tin bệnh nhân thủ công." Foreground="#637780" Margin="0,6,0,12"/>
+    </StackPanel>
 
-        private void Reload_Click(object sender, RoutedEventArgs e)
-        {
-            HospitalBrowser.Reload();
-        }
+    <Grid Grid.Row="1" MinHeight="220">
+     <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+     </Grid.RowDefinitions>
 
-        private void AddAppointment_Click(object sender, RoutedEventArgs e)
-        {
-            var code = (PatientCodeBox.Text ?? "").Trim();
-            var name = (PatientNameBox.Text ?? "").Trim();
+     <TextBlock Grid.Row="0" Text="Trình duyệt lấy dữ liệu bệnh viện" FontWeight="SemiBold" Margin="0,0,0,8"/>
 
-            if (code.Length == 0 || name.Length == 0 ||
-                AppointmentDatePicker.SelectedDate == null || ShiftBox.SelectedItem == null)
-            {
-                MessageBox.Show("Vui lòng nhập mã bệnh nhân, tên bệnh nhân, ngày hẹn và buổi hẹn.",
-                    "Thiếu thông tin", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
+     <DockPanel Grid.Row="1" Margin="0,0,0,8">
+      <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+       <Button Content="←" Width="34" Height="32" Margin="0,0,4,0" Click="AddBack_Click"/>
+       <Button Content="→" Width="34" Height="32" Margin="0,0,4,0" Click="AddForward_Click"/>
+       <Button Content="↻" Width="34" Height="32" Margin="0,0,7,0" Click="AddReload_Click"/>
+      </StackPanel>
+      <Button Content="Mở" Width="65" Height="32" DockPanel.Dock="Right" Click="AddOpenUrl_Click"/>
+      <TextBox x:Name="AddUrlBox" Height="32" Padding="8" Text="https://" VerticalContentAlignment="Center"/>
+     </DockPanel>
 
-            var exam = (ExamCodeBox.Text ?? "").Trim();
-            if (Database.HasActiveAppointment(code, exam))
-            {
-                MessageBox.Show(
-                    "Bệnh nhân đã có lịch hẹn đang hiệu lực. Hãy kiểm tra lịch cũ và quyết định trả hoặc giữ trước khi thêm lịch mới.",
-                    "Phát hiện lịch trùng", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
+     <Border Grid.Row="2" Background="White" CornerRadius="8" BorderBrush="#DCE5E8" BorderThickness="1" ClipToBounds="True">
+      <cef:ChromiumWebBrowser x:Name="AddHospitalBrowser" Address="about:blank"/>
+     </Border>
+    </Grid>
 
-            var shift = ((ComboBoxItem)ShiftBox.SelectedItem).Content.ToString();
-            Database.Add(new Appointment
-            {
-                PatientCode = code,
-                PatientName = name,
-                ExamCode = exam,
-                ServiceName = ServiceBox.Text,
-                AppointmentDate = AppointmentDatePicker.SelectedDate.Value,
-                Shift = shift
-            });
+    <Separator Grid.Row="2" Margin="0,12,0,12"/>
 
-            MessageBox.Show("Đã thêm lịch hẹn vào cơ sở dữ liệu trên máy tính.",
-                "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
-            PatientCodeBox.Clear();
-            PatientNameBox.Clear();
-            ExamCodeBox.Clear();
-        }
+    <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
+     <Border Background="White" CornerRadius="10" Padding="18">
+      <StackPanel>
+       <TextBlock Text="NHẬP LỊCH THỦ CÔNG" FontSize="17" FontWeight="Bold" Foreground="#18333D" Margin="0,0,0,14"/>
 
-        private void LoadAppointments()
-        {
-            var from = FromDatePicker.SelectedDate ?? DateTime.Today;
-            var to = ToDatePicker.SelectedDate ?? from;
-            if (to < from)
-            {
-                MessageBox.Show("Ngày đến phải bằng hoặc sau ngày bắt đầu.");
-                return;
-            }
+       <UniformGrid Columns="2">
+        <StackPanel Margin="0,0,12,10">
+         <TextBlock Text="Mã bệnh nhân *"/>
+         <TextBox x:Name="PatientCodeBox" Height="34" Padding="8"/>
+        </StackPanel>
 
-            var selected = FilterShiftBox.SelectedItem as ComboBoxItem;
-            var shift = selected == null ? "Cả ngày" : selected.Content.ToString();
-            DataTable data = Database.GetAppointments(from, to, shift, IncludeReturnedCheck.IsChecked == true);
-            AppointmentsGrid.ItemsSource = data.DefaultView;
-            CountText.Text = data.Rows.Count + " ca";
-        }
+        <StackPanel Margin="0,0,0,10">
+         <TextBlock Text="Tên bệnh nhân *"/>
+         <TextBox x:Name="PatientNameBox" Height="34" Padding="8"/>
+        </StackPanel>
 
-        private void Refresh_Click(object sender, RoutedEventArgs e) { LoadAppointments(); }
-        private void Filter_Changed(object sender, RoutedEventArgs e)
-        {
-            if (IsLoaded && FilterShiftBox.SelectedItem != null) LoadAppointments();
-        }
+        <StackPanel Margin="0,0,12,10">
+         <TextBlock Text="Khoa phòng *"/>
+         <TextBox x:Name="DepartmentBox" Height="34" Padding="8"/>
+        </StackPanel>
 
-        private void ReturnAppointment_Click(object sender, RoutedEventArgs e)
-        {
-            var view = AppointmentsGrid.SelectedItem as DataRowView;
-            if (view == null)
-            {
-                MessageBox.Show("Hãy chọn một lịch trong danh sách.");
-                return;
-            }
+        <StackPanel Margin="0,0,0,10">
+         <TextBlock Text="Mã chỉ định"/>
+         <TextBox x:Name="ExamCodeBox" Height="34" Padding="8"/>
+        </StackPanel>
 
-            if (MessageBox.Show("Xác nhận trả lịch đã chọn? Dữ liệu vẫn được giữ trong lịch sử.",
-                "Xác nhận", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
-                return;
+        <StackPanel Margin="0,0,12,10">
+         <TextBlock Text="Tên dịch vụ"/>
+         <TextBox x:Name="ServiceBox" Height="34" Padding="8" Text="Chụp CLVT"/>
+        </StackPanel>
 
-            Database.Return(Convert.ToInt64(view["Id"]));
-            LoadAppointments();
-        }
-    }
-}
+        <StackPanel Margin="0,0,0,10">
+         <TextBlock Text="Ngày hẹn"/>
+         <DatePicker x:Name="AppointmentDatePicker" Height="34"/>
+        </StackPanel>
+       </UniformGrid>
+
+       <StackPanel Margin="0,0,0,8">
+        <TextBlock Text="Buổi hẹn"/>
+        <ComboBox x:Name="ShiftBox" Height="34" Width="180" HorizontalAlignment="Left">
+         <ComboBoxItem Content="Sáng" IsSelected="True"/>
+         <ComboBoxItem Content="Chiều"/>
+        </ComboBox>
+       </StackPanel>
+
+       <Button Content="XÁC NHẬN THÊM LỊCH" Height="42" Width="220"
+        HorizontalAlignment="Left" Margin="0,12,0,0"
+        Background="#147D78" Foreground="White"
+        FontWeight="SemiBold" Click="AddAppointment_Click"/>
+      </StackPanel>
+     </Border>
+    </ScrollViewer>
+   </Grid>
+
+   <!-- TAB 3: LỊCH ĐÃ HẸN -->
+   <Grid x:Name="ListView" Visibility="Collapsed">
+    <Grid.RowDefinitions>
+     <RowDefinition Height="Auto"/>
+     <RowDefinition Height="Auto"/>
+     <RowDefinition Height="Auto"/>
+     <RowDefinition Height="*"/>
+     <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <StackPanel Grid.Row="0">
+     <TextBlock Text="Lịch đã hẹn" FontSize="26" FontWeight="SemiBold" Foreground="#18333D"/>
+     <TextBlock Text="Tra cứu, lọc và kiểm soát số ca đã xếp lịch." Foreground="#637780" Margin="0,6,0,18"/>
+    </StackPanel>
+
+    <Border Grid.Row="1" Background="White" CornerRadius="10" Padding="16" Margin="0,0,0,14">
+     <StackPanel>
+      <TextBlock Text="Bộ lọc" FontWeight="SemiBold" Margin="0,0,0,10"/>
+      <UniformGrid Columns="3">
+       <StackPanel Margin="0,0,12,0">
+        <TextBlock Text="Từ ngày"/>
+        <DatePicker x:Name="FromDatePicker" Height="34"/>
+       </StackPanel>
+       <StackPanel Margin="0,0,12,0">
+        <TextBlock Text="Đến ngày"/>
+        <DatePicker x:Name="ToDatePicker" Height="34"/>
+       </StackPanel>
+       <StackPanel>
+        <TextBlock Text="Buổi"/>
+        <ComboBox x:Name="FilterShiftBox" Height="34" SelectionChanged="Filter_Changed">
+         <ComboBoxItem Content="Cả ngày" IsSelected="True"/>
+         <ComboBoxItem Content="Sáng"/>
+         <ComboBoxItem Content="Chiều"/>
+        </ComboBox>
+       </StackPanel>
+      </UniformGrid>
+
+      <CheckBox x:Name="IncludeReturnedCheck" Content="Hiển thị cả lịch đã trả" Margin="0,12,0,0" Checked="Filter_Changed" Unchecked="Filter_Changed"/>
+      <Button Content="Áp dụng bộ lọc" Width="145" Height="34" HorizontalAlignment="Left" Margin="0,12,0,0" Click="Refresh_Click"/>
+     </StackPanel>
+    </Border>
+
+    <Border Grid.Row="2" Background="#E5F2F0" CornerRadius="9" Padding="16" Margin="0,0,0,14">
+     <StackPanel Orientation="Horizontal">
+      <TextBlock Text="Tổng số ca trong danh sách: " FontWeight="SemiBold" Foreground="#24514D"/>
+      <TextBlock x:Name="CountText" Text="0 ca" FontWeight="Bold" Foreground="#147D78" FontSize="17"/>
+     </StackPanel>
+    </Border>
+
+    <DataGrid x:Name="AppointmentsGrid" Grid.Row="3" AutoGenerateColumns="True" IsReadOnly="True" CanUserAddRows="False" Background="White" BorderBrush="#DCE5E8" HeadersVisibility="Column" RowHeight="34"/>
+
+    <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+     <Button Content="Trả lịch đã chọn" Width="145" Height="36" Background="#A43D3D" Foreground="White" Click="ReturnAppointment_Click"/>
+     <Button Content="Làm mới" Width="100" Height="36" Margin="10,0,0,0" Click="Refresh_Click"/>
+    </StackPanel>
+   </Grid>
+  </Grid>
+ </Grid>
+</Window>
