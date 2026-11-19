@@ -6,8 +6,11 @@
     <LangVersion>7.3</LangVersion>
     <RootNamespace>PatientAppointmentManager</RootNamespace>
     <AssemblyName>PatientAppointmentManager</AssemblyName>
+    <PlatformTarget>x64</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="System.Data.SQLite.Core" Version="1.0.119" />
+    <PackageReference Include="CefSharp.Wpf" Version="109.1.110" />
   </ItemGroup>
 </Project>

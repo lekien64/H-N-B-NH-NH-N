@@ -1,0 +1,34 @@
+PATIENT APPOINTMENT MANAGER v0.2 - GÓI TÍCH HỢP TRÌNH DUYỆT
+
+NHÁNH ĐÍCH:
+feature/v0.2-cefsharp-browser
+
+CÁC FILE CẦN THAY:
+1. PatientAppointmentManager.csproj
+2. App.xaml.cs
+3. MainWindow.xaml
+4. MainWindow.xaml.cs
+5. .github/workflows/build-windows.yml
+
+CÁCH ĐƯA LÊN GITHUB:
+- Mở repository và chuyển sang nhánh feature/v0.2-cefsharp-browser.
+- Thay từng file đúng đường dẫn, giữ nguyên các file Data/Database.cs,
+  Models/Appointment.cs và App.xaml.
+- Với workflow, mở .github/workflows/build-windows.yml và thay toàn bộ nội dung.
+- Commit các thay đổi vào nhánh feature, KHÔNG commit vào main.
+- Mở Actions và chạy workflow nếu push chưa tự kích hoạt.
+
+KIỂM TRA SAU BUILD:
+- Tải Artifact PatientAppointmentManager-v0.2-CefSharp-Win64.
+- Giải nén toàn bộ thư mục, không chỉ chép riêng file EXE.
+- Chạy PatientAppointmentManager.exe trên Windows 11 trước.
+- Sau đó thử trên Windows 7 SP1 x64 đã cài .NET Framework 4.8 và Microsoft Visual C++ Redistributable x64 phù hợp.
+- Kiểm tra mở website nội bộ thử nghiệm, quay lại, tiến tới, tải lại.
+- Chưa dùng dữ liệu bệnh nhân thật trong giai đoạn kiểm thử.
+
+LƯU Ý QUAN TRỌNG:
+- Đây là gói mã nguồn thay thế, chưa phải bản build đã xác minh.
+- CefSharp/Chromium 109 là nhánh cũ, không dùng để duyệt Internet tùy ý.
+- Cấu hình hiện tại nhắm Windows x64. Windows 7 32-bit chưa được hỗ trợ trong gói này.
+- Tích hợp trình duyệt mới chỉ có điều hướng website. Chưa có bộ đọc DOM,
+  chưa tự động quét mã BN và chưa lọc chỉ định CLVT.
