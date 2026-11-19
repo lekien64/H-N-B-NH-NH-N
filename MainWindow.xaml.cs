@@ -24,63 +24,29 @@ namespace PatientAppointmentManager
             HospitalBrowser.FrameLoadEnd += (sender, args) =>
             {
                 if (args.Frame.IsMain)
-                {
-                    Dispatcher.BeginInvoke(new Action(() =>
-                    {
-                        UrlBox.Text = args.Url;
-                    }));
-                }
+                    Dispatcher.BeginInvoke(new Action(() => UrlBox.Text = args.Url));
             };
 
             AddHospitalBrowser.FrameLoadEnd += (sender, args) =>
             {
                 if (args.Frame.IsMain)
-                {
-                    Dispatcher.BeginInvoke(new Action(() =>
-                    {
-                        AddUrlBox.Text = args.Url;
-                    }));
-                }
+                    Dispatcher.BeginInvoke(new Action(() => AddUrlBox.Text = args.Url));
             };
         }
 
-        // ==============================
-        // CHUYỂN TAB
-        // ==============================
-
         private void ShowView(string name)
         {
-            BrowserView.Visibility =
-                name == "browser" ? Visibility.Visible : Visibility.Collapsed;
-
-            AddView.Visibility =
-                name == "add" ? Visibility.Visible : Visibility.Collapsed;
-
-            ListView.Visibility =
-                name == "list" ? Visibility.Visible : Visibility.Collapsed;
+            BrowserView.Visibility = name == "browser" ? Visibility.Visible : Visibility.Collapsed;
+            AddView.Visibility = name == "add" ? Visibility.Visible : Visibility.Collapsed;
+            ListView.Visibility = name == "list" ? Visibility.Visible : Visibility.Collapsed;
 
             if (name == "list")
                 LoadAppointments();
         }
 
-        private void BrowserTab_Click(object sender, RoutedEventArgs e)
-        {
-            ShowView("browser");
-        }
-
-        private void AddTab_Click(object sender, RoutedEventArgs e)
-        {
-            ShowView("add");
-        }
-
-        private void ListTab_Click(object sender, RoutedEventArgs e)
-        {
-            ShowView("list");
-        }
-
-        // ==============================
-        // KIỂM TRA ĐỊA CHỈ WEBSITE
-        // ==============================
+        private void BrowserTab_Click(object sender, RoutedEventArgs e) => ShowView("browser");
+        private void AddTab_Click(object sender, RoutedEventArgs e) => ShowView("add");
+        private void ListTab_Click(object sender, RoutedEventArgs e) => ShowView("list");
 
         private bool TryGetWebAddress(string input, out string address)
         {
@@ -105,21 +71,13 @@ namespace PatientAppointmentManager
             return true;
         }
 
-        // ==============================
-        // TRÌNH DUYỆT TAB 1
-        // ==============================
-
         private void OpenUrl_Click(object sender, RoutedEventArgs e)
         {
             string address;
 
             if (!TryGetWebAddress(UrlBox.Text, out address))
             {
-                MessageBox.Show(
-                    "Địa chỉ website không hợp lệ.",
-                    "Lỗi địa chỉ",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                MessageBox.Show("Địa chỉ website không hợp lệ.");
                 return;
             }
 
@@ -128,14 +86,12 @@ namespace PatientAppointmentManager
 
         private void Back_Click(object sender, RoutedEventArgs e)
         {
-            if (HospitalBrowser.CanGoBack)
-                HospitalBrowser.Back();
+            if (HospitalBrowser.CanGoBack) HospitalBrowser.Back();
         }
 
         private void Forward_Click(object sender, RoutedEventArgs e)
         {
-            if (HospitalBrowser.CanGoForward)
-                HospitalBrowser.Forward();
+            if (HospitalBrowser.CanGoForward) HospitalBrowser.Forward();
         }
 
         private void Reload_Click(object sender, RoutedEventArgs e)
@@ -143,21 +99,13 @@ namespace PatientAppointmentManager
             HospitalBrowser.Reload();
         }
 
-        // ==============================
-        // TRÌNH DUYỆT TAB 2
-        // ==============================
-
         private void AddOpenUrl_Click(object sender, RoutedEventArgs e)
         {
             string address;
 
             if (!TryGetWebAddress(AddUrlBox.Text, out address))
             {
-                MessageBox.Show(
-                    "Địa chỉ website không hợp lệ.",
-                    "Lỗi địa chỉ",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                MessageBox.Show("Địa chỉ website không hợp lệ.");
                 return;
             }
 
@@ -166,24 +114,18 @@ namespace PatientAppointmentManager
 
         private void AddBack_Click(object sender, RoutedEventArgs e)
         {
-            if (AddHospitalBrowser.CanGoBack)
-                AddHospitalBrowser.Back();
+            if (AddHospitalBrowser.CanGoBack) AddHospitalBrowser.Back();
         }
 
         private void AddForward_Click(object sender, RoutedEventArgs e)
         {
-            if (AddHospitalBrowser.CanGoForward)
-                AddHospitalBrowser.Forward();
+            if (AddHospitalBrowser.CanGoForward) AddHospitalBrowser.Forward();
         }
 
         private void AddReload_Click(object sender, RoutedEventArgs e)
         {
             AddHospitalBrowser.Reload();
         }
-
-        // ==============================
-        // THÊM LỊCH HẸN
-        // ==============================
 
         private void AddAppointment_Click(object sender, RoutedEventArgs e)
         {
@@ -210,8 +152,7 @@ namespace PatientAppointmentManager
             if (Database.HasActiveAppointment(code, exam))
             {
                 MessageBox.Show(
-                    "Bệnh nhân đã có lịch hẹn đang hiệu lực.\n\n" +
-                    "Vui lòng kiểm tra lịch cũ trước khi thêm lịch mới.",
+                    "Bệnh nhân đã có lịch hẹn đang hiệu lực. Vui lòng kiểm tra lịch cũ trước khi thêm lịch mới.",
                     "Phát hiện lịch trùng",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
@@ -219,11 +160,7 @@ namespace PatientAppointmentManager
             }
 
             var selectedShift = ShiftBox.SelectedItem as ComboBoxItem;
-
-            if (selectedShift == null)
-                return;
-
-            string shift = selectedShift.Content.ToString();
+            if (selectedShift == null) return;
 
             try
             {
@@ -235,14 +172,10 @@ namespace PatientAppointmentManager
                     ExamCode = exam,
                     ServiceName = service,
                     AppointmentDate = AppointmentDatePicker.SelectedDate.Value,
-                    Shift = shift
+                    Shift = selectedShift.Content.ToString()
                 });
 
-                MessageBox.Show(
-                    "Đã thêm lịch hẹn thành công.",
-                    "Thành công",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                MessageBox.Show("Đã thêm lịch hẹn thành công.");
 
                 PatientCodeBox.Clear();
                 PatientNameBox.Clear();
@@ -255,46 +188,31 @@ namespace PatientAppointmentManager
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    "Không thể lưu lịch hẹn.\n\n" + ex.Message,
-                    "Lỗi cơ sở dữ liệu",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                MessageBox.Show("Không thể lưu lịch hẹn.\n\n" + ex.Message);
             }
         }
 
-        // ==============================
-        // TẢI VÀ ĐẾM LỊCH
-        // ==============================
-
         private void LoadAppointments()
         {
-            DateTime from =
-                FromDatePicker.SelectedDate ?? DateTime.Today;
-
-            DateTime to =
-                ToDatePicker.SelectedDate ?? from;
+            DateTime from = FromDatePicker.SelectedDate ?? DateTime.Today;
+            DateTime to = ToDatePicker.SelectedDate ?? from;
 
             if (to.Date < from.Date)
             {
                 TotalCountText.Text = "0 ca";
                 ActiveCountText.Text = "0 ca";
 
-                MessageBox.Show(
-                    "Ngày đến phải bằng hoặc sau ngày bắt đầu.",
-                    "Khoảng ngày không hợp lệ",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                MessageBox.Show("Ngày đến phải bằng hoặc sau ngày bắt đầu.");
                 return;
             }
 
-            var selected =
-                FilterShiftBox.SelectedItem as ComboBoxItem;
+            var shiftItem = FilterShiftBox.SelectedItem as ComboBoxItem;
+            string shift = shiftItem == null ? "Cả ngày" : shiftItem.Content.ToString();
 
-            string shift =
-                selected == null
-                    ? "Cả ngày"
-                    : selected.Content.ToString();
+            var injectionItem = InjectionFilterBox.SelectedItem as ComboBoxItem;
+            string injectionFilter = injectionItem == null
+                ? "Tất cả"
+                : injectionItem.Content.ToString();
 
             try
             {
@@ -302,25 +220,18 @@ namespace PatientAppointmentManager
                     from.Date,
                     to.Date,
                     shift,
-                    IncludeReturnedCheck.IsChecked == true);
+                    IncludeReturnedCheck.IsChecked == true,
+                    injectionFilter);
 
                 AppointmentsGrid.ItemsSource = data.DefaultView;
 
-                // Tổng số ca đang hiển thị sau khi áp dụng bộ lọc.
                 int totalCount = data.Rows.Count;
-
-                // Số ca còn hẹn, không tính lịch đã trả.
                 int activeCount = 0;
 
                 foreach (DataRow row in data.Rows)
                 {
-                    if (string.Equals(
-                        Convert.ToString(row["Trạng thái"]),
-                        "Đã hẹn",
-                        StringComparison.OrdinalIgnoreCase))
-                    {
+                    if (Convert.ToString(row["Trạng thái"]) == "Đã hẹn")
                         activeCount++;
-                    }
                 }
 
                 TotalCountText.Text = totalCount + " ca";
@@ -341,25 +252,23 @@ namespace PatientAppointmentManager
             LoadAppointments();
         }
 
-        // ComboBox và DatePicker dùng SelectionChangedEventArgs.
         private void FilterSelection_Changed(
             object sender,
             SelectionChangedEventArgs e)
         {
-            if (IsLoaded && FilterShiftBox.SelectedItem != null)
+            if (IsLoaded &&
+                FilterShiftBox.SelectedItem != null &&
+                InjectionFilterBox.SelectedItem != null)
                 LoadAppointments();
         }
 
-        // CheckBox dùng RoutedEventArgs.
         private void Filter_Changed(object sender, RoutedEventArgs e)
         {
-            if (IsLoaded && FilterShiftBox.SelectedItem != null)
+            if (IsLoaded &&
+                FilterShiftBox.SelectedItem != null &&
+                InjectionFilterBox.SelectedItem != null)
                 LoadAppointments();
         }
-
-        // ==============================
-        // TRẢ LỊCH
-        // ==============================
 
         private void ReturnAppointment_Click(object sender, RoutedEventArgs e)
         {
@@ -367,63 +276,37 @@ namespace PatientAppointmentManager
 
             if (view == null)
             {
-                MessageBox.Show(
-                    "Hãy chọn một lịch trong danh sách.",
-                    "Chưa chọn lịch",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                MessageBox.Show("Hãy chọn một lịch trong danh sách.");
                 return;
             }
 
-            string status = Convert.ToString(view["Trạng thái"]);
-
-            if (status != "Đã hẹn")
+            if (Convert.ToString(view["Trạng thái"]) != "Đã hẹn")
             {
-                MessageBox.Show(
-                    "Lịch này đã được trả trước đó hoặc không còn hiệu lực.",
-                    "Không thể trả lịch",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                MessageBox.Show("Lịch này đã được trả trước đó hoặc không còn hiệu lực.");
                 return;
             }
 
-            string patientName =
-                Convert.ToString(view["Tên bệnh nhân"]);
-
-            string patientCode =
-                Convert.ToString(view["Mã BN"]);
+            string patientName = Convert.ToString(view["Tên bệnh nhân"]);
+            string patientCode = Convert.ToString(view["Mã BN"]);
 
             if (MessageBox.Show(
                 "Xác nhận trả lịch của bệnh nhân:\n\n" +
                 patientName + "\nMã BN: " + patientCode +
-                "\n\nLịch sẽ được giữ trong lịch sử và không còn hiệu lực.",
+                "\n\nLịch vẫn được lưu trong lịch sử.",
                 "Xác nhận trả lịch",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question) != MessageBoxResult.Yes)
-            {
                 return;
-            }
 
             try
             {
-                long id = Convert.ToInt64(view["Id"]);
-
-                Database.Return(id);
+                Database.Return(Convert.ToInt64(view["Id"]));
                 LoadAppointments();
-
-                MessageBox.Show(
-                    "Đã trả lịch thành công.",
-                    "Hoàn tất",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                MessageBox.Show("Đã trả lịch thành công.");
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    "Không thể trả lịch.\n\n" + ex.Message,
-                    "Lỗi",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                MessageBox.Show("Không thể trả lịch.\n\n" + ex.Message);
             }
         }
     }
