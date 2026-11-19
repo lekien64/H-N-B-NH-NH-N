@@ -2,6 +2,7 @@ using System;
 using System.Data;
 using System.Windows;
 using System.Windows.Controls;
+using CefSharp;
 using PatientAppointmentManager.Data;
 using PatientAppointmentManager.Models;
 
