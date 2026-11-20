@@ -2,6 +2,8 @@ using System;
 using System.Data;
 using System.Text;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Security.Cryptography;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -24,16 +26,18 @@ namespace PatientAppointmentManager
             FromDatePicker.SelectedDate = DateTime.Today;
             ToDatePicker.SelectedDate = DateTime.Today.AddDays(30);
 
-            HospitalBrowser.FrameLoadEnd += (sender, args) =>
-            {
-                if (args.Frame.IsMain)
-                    Dispatcher.BeginInvoke(new Action(() => UrlBox.Text = args.Url));
-            };
+            RegisterBrowser(HospitalBrowser);
+            LoadBrowserHistory(UrlBox);
+            LoadBrowserHistory(AddUrlBox);
 
             AddHospitalBrowser.FrameLoadEnd += (sender, args) =>
             {
                 if (args.Frame.IsMain)
-                    Dispatcher.BeginInvoke(new Action(() => AddUrlBox.Text = args.Url));
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        AddUrlBox.Text = args.Url;
+                        SaveVisitedAddress(args.Url, AddUrlBox);
+                    }));
             };
         }
 
@@ -45,6 +49,92 @@ namespace PatientAppointmentManager
 
             if (name == "list")
                 LoadAppointments();
+        }
+
+        private void Sidebar_MouseEnter(object sender, MouseEventArgs e)
+        {
+            SidebarColumn.Width = new GridLength(190);
+        }
+
+        private void Sidebar_MouseLeave(object sender, MouseEventArgs e)
+        {
+            SidebarColumn.Width = new GridLength(64);
+        }
+
+        private ChromiumWebBrowser ActiveBrowser
+        {
+            get
+            {
+                var item = BrowserTabsControl.SelectedItem as TabItem;
+                return item == null ? HospitalBrowser : item.Content as ChromiumWebBrowser;
+            }
+        }
+
+        private void RegisterBrowser(ChromiumWebBrowser browser)
+        {
+            browser.FrameLoadEnd += (sender, args) =>
+            {
+                if (!args.Frame.IsMain) return;
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    if (ReferenceEquals(browser, ActiveBrowser))
+                        UrlBox.Text = args.Url;
+                    SaveVisitedAddress(args.Url, UrlBox);
+                }));
+            };
+        }
+
+        private void LoadBrowserHistory(ComboBox box)
+        {
+            try
+            {
+                box.Items.Clear();
+                foreach (string address in Database.GetBrowserHistory(30))
+                    box.Items.Add(address);
+            }
+            catch { /* Lịch sử không được làm gián đoạn khởi động ứng dụng. */ }
+        }
+
+        private void SaveVisitedAddress(string address, ComboBox box)
+        {
+            if (string.IsNullOrWhiteSpace(address) || address == "about:blank") return;
+            try
+            {
+                Database.SaveBrowserHistory(address);
+                string current = box.Text;
+                LoadBrowserHistory(box);
+                box.Text = current;
+            }
+            catch { }
+        }
+
+        private void BrowserTabsControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (!IsLoaded || e.Source != BrowserTabsControl) return;
+            var browser = ActiveBrowser;
+            if (browser != null)
+                UrlBox.Text = browser.Address ?? string.Empty;
+        }
+
+        private void NewBrowserTab_Click(object sender, RoutedEventArgs e)
+        {
+            var browser = new ChromiumWebBrowser { Address = "about:blank" };
+            RegisterBrowser(browser);
+            var header = new StackPanel { Orientation = Orientation.Horizontal };
+            header.Children.Add(new TextBlock { Text = "Trang " + (BrowserTabsControl.Items.Count + 1), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) });
+            var close = new Button { Content = "×", Width = 22, Height = 22, Padding = new Thickness(0), ToolTip = "Đóng tab" };
+            var tab = new TabItem { Content = browser, Header = header };
+            close.Click += (s, args) =>
+            {
+                if (BrowserTabsControl.Items.Count <= 1) return;
+                BrowserTabsControl.Items.Remove(tab);
+                if (browser.IsBrowserInitialized) browser.Dispose();
+            };
+            header.Children.Add(close);
+            BrowserTabsControl.Items.Add(tab);
+            BrowserTabsControl.SelectedItem = tab;
+            UrlBox.Text = string.Empty;
+            UrlBox.Focus();
         }
 
         private void BrowserTab_Click(object sender, RoutedEventArgs e) => ShowView("browser");
@@ -72,6 +162,16 @@ namespace PatientAppointmentManager
 
             address = uri.AbsoluteUri;
             return true;
+        }
+
+        private void UrlBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            if (UrlBox.Items.Count > 0) UrlBox.IsDropDownOpen = true;
+        }
+
+        private void AddUrlBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+        {
+            if (AddUrlBox.Items.Count > 0) AddUrlBox.IsDropDownOpen = true;
         }
 
         private void UrlBox_KeyDown(object sender, KeyEventArgs e)
@@ -102,23 +202,132 @@ namespace PatientAppointmentManager
                 return;
             }
 
-            HospitalBrowser.Address = address;
+            ActiveBrowser.Address = address;
         }
 
         private void Back_Click(object sender, RoutedEventArgs e)
         {
-            if (HospitalBrowser.CanGoBack) HospitalBrowser.Back();
+            if (ActiveBrowser != null && ActiveBrowser.CanGoBack) ActiveBrowser.Back();
         }
 
         private void Forward_Click(object sender, RoutedEventArgs e)
         {
-            if (HospitalBrowser.CanGoForward) HospitalBrowser.Forward();
+            if (ActiveBrowser != null && ActiveBrowser.CanGoForward) ActiveBrowser.Forward();
         }
 
         private void Reload_Click(object sender, RoutedEventArgs e)
         {
-            HospitalBrowser.Reload();
+            if (ActiveBrowser != null) ActiveBrowser.Reload();
         }
+
+        private ChromiumWebBrowser CredentialBrowser
+        {
+            get { return AddView.Visibility == Visibility.Visible ? AddHospitalBrowser : ActiveBrowser; }
+        }
+
+        private string CurrentBrowserHost()
+        {
+            Uri uri;
+            string address = CredentialBrowser == null ? null : CredentialBrowser.Address;
+            return Uri.TryCreate(address, UriKind.Absolute, out uri) ? uri.Host.ToLowerInvariant() : null;
+        }
+
+        private static byte[] CredentialEntropy(string host)
+        {
+            return Encoding.UTF8.GetBytes("SoHenCT|" + (host ?? string.Empty));
+        }
+
+        private void SaveLogin_Click(object sender, RoutedEventArgs e)
+        {
+            string host = CurrentBrowserHost();
+            if (string.IsNullOrWhiteSpace(host))
+            {
+                MessageBox.Show("Hãy mở trang đăng nhập trước khi lưu tài khoản.");
+                return;
+            }
+
+            var dialog = new Window
+            {
+                Title = "Lưu đăng nhập cho " + host,
+                Width = 420, Height = 270, ResizeMode = ResizeMode.NoResize,
+                Owner = this, WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Background = System.Windows.Media.Brushes.White
+            };
+            var panel = new StackPanel { Margin = new Thickness(18) };
+            panel.Children.Add(new TextBlock { Text = "Tên đăng nhập", Margin = new Thickness(0, 0, 0, 5) });
+            var userBox = new TextBox { Height = 34, Margin = new Thickness(0, 0, 0, 12) };
+            panel.Children.Add(userBox);
+            panel.Children.Add(new TextBlock { Text = "Mật khẩu", Margin = new Thickness(0, 0, 0, 5) });
+            var passBox = new PasswordBox { Height = 34, Margin = new Thickness(0, 0, 0, 14) };
+            panel.Children.Add(passBox);
+            var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+            var save = new Button { Content = "Lưu mã hóa", Width = 110, Height = 34, Margin = new Thickness(0, 0, 8, 0) };
+            var cancel = new Button { Content = "Hủy", Width = 80, Height = 34 };
+            save.Click += (s, args) =>
+            {
+                if (string.IsNullOrWhiteSpace(userBox.Text) || string.IsNullOrEmpty(passBox.Password))
+                {
+                    MessageBox.Show(dialog, "Nhập cả tên đăng nhập và mật khẩu.");
+                    return;
+                }
+                try
+                {
+                    byte[] raw = Encoding.UTF8.GetBytes(userBox.Text + "\n" + passBox.Password);
+                    byte[] protectedBytes = ProtectedData.Protect(raw, CredentialEntropy(host), DataProtectionScope.CurrentUser);
+                    Database.SaveProtectedLogin(host, Convert.ToBase64String(protectedBytes));
+                    Array.Clear(raw, 0, raw.Length);
+                    passBox.Clear();
+                    dialog.DialogResult = true;
+                    dialog.Close();
+                }
+                catch (Exception ex) { MessageBox.Show(dialog, "Không thể lưu thông tin đăng nhập: " + ex.Message); }
+            };
+            cancel.Click += (s, args) => dialog.Close();
+            buttons.Children.Add(save); buttons.Children.Add(cancel); panel.Children.Add(buttons);
+            dialog.Content = panel;
+            dialog.ShowDialog();
+            if (dialog.DialogResult == true)
+                MessageBox.Show("Đã lưu thông tin đăng nhập đã mã hóa cho " + host + ". Chỉ tài khoản Windows hiện tại giải mã được.");
+        }
+
+        private async void FillLogin_Click(object sender, RoutedEventArgs e)
+        {
+            string host = CurrentBrowserHost();
+            if (string.IsNullOrWhiteSpace(host)) { MessageBox.Show("Hãy mở website cần đăng nhập."); return; }
+            try
+            {
+                string stored = Database.GetProtectedLogin(host);
+                if (string.IsNullOrWhiteSpace(stored))
+                {
+                    MessageBox.Show("Chưa có tài khoản được lưu cho website này. Hãy chọn Lưu đăng nhập trước.", "Thông tin đăng nhập");
+                    return;
+                }
+                byte[] protectedBytes = Convert.FromBase64String(stored);
+                byte[] raw = ProtectedData.Unprotect(protectedBytes, CredentialEntropy(host), DataProtectionScope.CurrentUser);
+                string[] parts = Encoding.UTF8.GetString(raw).Split(new[] { '\n' }, 2);
+                Array.Clear(raw, 0, raw.Length);
+                if (parts.Length != 2) throw new InvalidOperationException("Dữ liệu đăng nhập không hợp lệ.");
+                string user = EscapeJavaScript(parts[0]);
+                string pass = EscapeJavaScript(parts[1]);
+                string script = "(function(){var p=document.querySelector('input[type=password]');if(!p)return 'Không tìm thấy ô mật khẩu';var u=document.querySelector('input[type=email],input[autocomplete=username],input[type=text]');function set(el,v){if(!el)return;var d=Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el),'value');if(d&&d.set)d.set.call(el,v);else el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));}set(u,'" + user + "');set(p,'" + pass + "');return 'Đã điền thông tin, chưa tự gửi biểu mẫu';})()";
+                var frame = CredentialBrowser.GetMainFrame();
+                var result = await frame.EvaluateScriptAsync(script);
+                MessageBox.Show(Convert.ToString(result.Result ?? "Không thể tự điền"), "Tự điền đăng nhập");
+            }
+            catch (Exception ex) { MessageBox.Show("Không thể giải mã hoặc điền thông tin: " + ex.Message); }
+        }
+
+        private static string EscapeJavaScript(string value)
+        {
+            return (value ?? string.Empty).Replace("\\", "\\\\").Replace("'", "\\'").Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n");
+        }
+
+        private void BrowserFit_Click(object sender, RoutedEventArgs e) { if (ActiveBrowser != null) ActiveBrowser.ZoomLevel = 0; }
+        private void BrowserZoomIn_Click(object sender, RoutedEventArgs e) { if (ActiveBrowser != null) ActiveBrowser.ZoomLevel = Math.Min(5, ActiveBrowser.ZoomLevel + 0.5); }
+        private void BrowserZoomOut_Click(object sender, RoutedEventArgs e) { if (ActiveBrowser != null) ActiveBrowser.ZoomLevel = Math.Max(-5, ActiveBrowser.ZoomLevel - 0.5); }
+        private void AddBrowserFit_Click(object sender, RoutedEventArgs e) { AddHospitalBrowser.ZoomLevel = 0; }
+        private void AddBrowserZoomIn_Click(object sender, RoutedEventArgs e) { AddHospitalBrowser.ZoomLevel = Math.Min(5, AddHospitalBrowser.ZoomLevel + 0.5); }
+        private void AddBrowserZoomOut_Click(object sender, RoutedEventArgs e) { AddHospitalBrowser.ZoomLevel = Math.Max(-5, AddHospitalBrowser.ZoomLevel - 0.5); }
 
         private void AddOpenUrl_Click(object sender, RoutedEventArgs e)
         {
@@ -395,7 +604,7 @@ namespace PatientAppointmentManager
 
         private async void InspectDom_Click(object sender, RoutedEventArgs e)
         {
-            await InspectBrowserDomAsync(HospitalBrowser, "Trình duyệt bệnh viện");
+            await InspectBrowserDomAsync(ActiveBrowser, "Trình duyệt bệnh viện");
         }
 
         private async void InspectAddDom_Click(object sender, RoutedEventArgs e)
@@ -469,6 +678,33 @@ namespace PatientAppointmentManager
             catch (Exception ex)
             {
                 MessageBox.Show("Không thể lưu lịch hẹn.\n\n" + ex.Message);
+            }
+        }
+
+        private void AppointmentsGrid_LoadingRow(object sender, DataGridRowEventArgs e)
+        {
+            var row = e.Row.DataContext as DataRowView;
+            if (row == null) return;
+            bool returned = Convert.ToString(row["Trạng thái"]) == "Đã trả hẹn";
+            e.Row.Foreground = returned ? System.Windows.Media.Brushes.Gray : System.Windows.Media.Brushes.DarkSlateGray;
+            e.Row.Opacity = returned ? 0.72 : 1.0;
+            e.Row.UpdateLayout();
+            foreach (var cell in FindVisualChildren<DataGridCell>(e.Row))
+            {
+                var text = cell.Content as TextBlock;
+                if (text != null)
+                    text.TextDecorations = returned ? TextDecorations.Strikethrough : null;
+            }
+        }
+
+        private static IEnumerable<T> FindVisualChildren<T>(DependencyObject parent) where T : DependencyObject
+        {
+            if (parent == null) yield break;
+            for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                DependencyObject child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
+                if (child is T) yield return (T)child;
+                foreach (T descendant in FindVisualChildren<T>(child)) yield return descendant;
             }
         }
 

@@ -55,6 +55,18 @@ ON Appointments(PatientCode);
 CREATE INDEX IF NOT EXISTS IX_Appointments_Date
 ON Appointments(AppointmentDate);
 
+CREATE TABLE IF NOT EXISTS SavedLogins(
+    Host TEXT PRIMARY KEY,
+    ProtectedData TEXT NOT NULL,
+    UpdatedAt TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS BrowserHistory(
+    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+    Url TEXT NOT NULL UNIQUE,
+    LastVisited TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS AuditLog(
     Id INTEGER PRIMARY KEY AUTOINCREMENT,
     AppointmentId INTEGER NOT NULL,
@@ -110,6 +122,88 @@ CREATE TABLE IF NOT EXISTS AuditLog(
             }
 
             return false;
+        }
+
+
+
+        public static void SaveProtectedLogin(string host, string protectedData)
+        {
+            using (var c = new SQLiteConnection(ConnectionString))
+            {
+                c.Open();
+                using (var cmd = c.CreateCommand())
+                {
+                    cmd.CommandText = @"INSERT OR REPLACE INTO SavedLogins(Host, ProtectedData, UpdatedAt)
+VALUES(@host, @data, @updated)";
+                    cmd.Parameters.AddWithValue("@host", host);
+                    cmd.Parameters.AddWithValue("@data", protectedData);
+                    cmd.Parameters.AddWithValue("@updated", DateTime.Now.ToString("s"));
+                    cmd.ExecuteNonQuery();
+                }
+            }
+        }
+
+        public static string GetProtectedLogin(string host)
+        {
+            using (var c = new SQLiteConnection(ConnectionString))
+            {
+                c.Open();
+                using (var cmd = c.CreateCommand())
+                {
+                    cmd.CommandText = "SELECT ProtectedData FROM SavedLogins WHERE Host=@host";
+                    cmd.Parameters.AddWithValue("@host", host);
+                    object value = cmd.ExecuteScalar();
+                    return value == null || value == DBNull.Value ? null : Convert.ToString(value);
+                }
+            }
+        }
+
+        public static void DeleteProtectedLogin(string host)
+        {
+            using (var c = new SQLiteConnection(ConnectionString))
+            {
+                c.Open();
+                using (var cmd = c.CreateCommand())
+                {
+                    cmd.CommandText = "DELETE FROM SavedLogins WHERE Host=@host";
+                    cmd.Parameters.AddWithValue("@host", host);
+                    cmd.ExecuteNonQuery();
+                }
+            }
+        }
+
+        public static void SaveBrowserHistory(string url)
+        {
+            if (string.IsNullOrWhiteSpace(url) || url == "about:blank") return;
+            using (var c = new SQLiteConnection(ConnectionString))
+            {
+                c.Open();
+                using (var cmd = c.CreateCommand())
+                {
+                    cmd.CommandText = @"INSERT OR REPLACE INTO BrowserHistory(Url, LastVisited)
+VALUES(@url, @visited)";
+                    cmd.Parameters.AddWithValue("@url", url.Trim());
+                    cmd.Parameters.AddWithValue("@visited", DateTime.Now.ToString("s"));
+                    cmd.ExecuteNonQuery();
+                }
+            }
+        }
+
+        public static System.Collections.Generic.List<string> GetBrowserHistory(int limit)
+        {
+            var result = new System.Collections.Generic.List<string>();
+            using (var c = new SQLiteConnection(ConnectionString))
+            {
+                c.Open();
+                using (var cmd = c.CreateCommand())
+                {
+                    cmd.CommandText = "SELECT Url FROM BrowserHistory ORDER BY LastVisited DESC LIMIT @limit";
+                    cmd.Parameters.AddWithValue("@limit", Math.Max(1, limit));
+                    using (var reader = cmd.ExecuteReader())
+                        while (reader.Read()) result.Add(Convert.ToString(reader[0]));
+                }
+            }
+            return result;
         }
 
         public static bool HasActiveAppointment(
@@ -240,7 +334,7 @@ SELECT
     InjectionStatus AS 'Tiêm thuốc cản quang',
     AppointmentDate AS 'Ngày hẹn',
     TRIM(Shift) AS 'Buổi',
-    Status AS 'Trạng thái'
+    CASE WHEN Status = 'Đã trả lịch' THEN 'Đã trả hẹn' ELSE Status END AS 'Trạng thái'
 FROM Appointments
 WHERE AppointmentDate >= @from
 AND AppointmentDate < @toExclusive";

@@ -1,32 +1,17 @@
-# Patient Appointment Manager v0.1
+# Sổ hẹn CT
 
-## Phạm vi bản đầu
-- Ứng dụng WPF cho Windows, mục tiêu Windows 7 SP1 đến Windows 11.
-- Cơ sở dữ liệu SQLite lưu tại `%LOCALAPPDATA%\\PatientAppointmentManager\\appointments.db`.
-- Ba khu vực: Trình duyệt, Thêm lịch, Lịch đã hẹn.
-- Thêm lịch thủ công bằng dữ liệu thử.
-- Lọc từ ngày đến ngày, Sáng/Chiều/Cả ngày.
-- Bộ đếm tổng số bản ghi khớp bộ lọc.
-- Trả lịch bằng cách đổi trạng thái, không xóa bản ghi.
+Ứng dụng WPF quản lý lịch hẹn bệnh nhân, sử dụng .NET Framework 4.8, SQLite và CefSharp 109.1.110.
 
-## Yêu cầu môi trường build
-- Visual Studio 2022 hoặc MSBuild có hỗ trợ .NET Framework 4.8.
-- .NET Framework 4.8 Developer Pack.
-- NuGet restore.
+## v0.4 Hybrid Browser
+- Sidebar tự thu gọn/mở rộng khi rê chuột, ba nút điều hướng dạng biểu tượng.
+- Trình duyệt tab 1 hỗ trợ nhiều tab riêng biệt.
+- Thanh địa chỉ trống khi khởi động, hỗ trợ Enter và gợi ý lịch sử URL.
+- Có nút zoom +/-, đưa zoom về 100% ở tab 1 và tab 2.
+- Dòng lịch đã trả được hiển thị gạch ngang và nhãn “Đã trả hẹn”.
+- Có lưu thông tin đăng nhập theo host bằng Windows DPAPI CurrentUser; thao tác lưu/tự điền do người dùng chủ động, không tự submit.
 
-Mở `PatientAppointmentManager.csproj`, restore NuGet rồi Build.
+## Build
+Mở `PatientAppointmentManager.csproj` bằng Visual Studio có hỗ trợ .NET Framework 4.8 hoặc chạy workflow GitHub Actions `Build So hen CT v0.4`.
 
-## Lưu ý quan trọng
-Đây là bộ khung v0.1, chưa phải phần mềm dùng trong vận hành bệnh viện:
-- Khu vực trình duyệt hiện là placeholder, chưa tích hợp Chromium.
-- Chưa đọc DOM, chưa tự nhận diện mã bệnh nhân hoặc chỉ định CLVT.
-- Chưa có kiểm thử trên Windows 7.
-- Chưa có cơ chế phân quyền người dùng hay mã hóa cơ sở dữ liệu.
-- Không nhập dữ liệu bệnh nhân thật cho đến khi hoàn tất kiểm thử và đánh giá bảo mật.
-
-## Kiến trúc tiếp theo
-1. Tích hợp Chromium Embedded Framework (CEF) với runtime tương thích Windows 7.
-2. Xây dựng adapter đọc DOM có cấu hình, không phụ thuộc một URL cố định.
-3. Nhận diện chỉ định CLVT và định danh từng chỉ định.
-4. Hoàn thiện popup Giữ lịch / Trả lịch, kiểm tra trùng theo quy tắc đã thống nhất.
-5. Bổ sung sao lưu/khôi phục, nhật ký đầy đủ và kiểm thử dữ liệu.
+## Lưu ý
+Giữ nguyên CefSharp 109 để duy trì khả năng chạy Windows 7 SP1. Bản mã nguồn này đã kiểm tra cấu trúc XML và đối chiếu event handler, nhưng chưa được biên dịch trong môi trường hiện tại. Hãy build và thử trên Windows trước khi thay bản ổn định.
