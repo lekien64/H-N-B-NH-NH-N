@@ -21,6 +21,7 @@ namespace PatientAppointmentManager
             InitializeComponent();
 
             Database.Initialize();
+            UpdateSidebarSelection("browser");
 
             AppointmentDatePicker.SelectedDate = DateTime.Today.AddDays(1);
             FromDatePicker.SelectedDate = DateTime.Today;
@@ -47,18 +48,28 @@ namespace PatientAppointmentManager
             AddView.Visibility = name == "add" ? Visibility.Visible : Visibility.Collapsed;
             ListView.Visibility = name == "list" ? Visibility.Visible : Visibility.Collapsed;
 
+            UpdateSidebarSelection(name);
             if (name == "list")
                 LoadAppointments();
         }
 
-        private void Sidebar_MouseEnter(object sender, MouseEventArgs e)
+        private void UpdateSidebarSelection(string selected)
         {
-            SidebarColumn.Width = new GridLength(190);
+            SetNavButtonState(BrowserNavButton, selected == "browser");
+            SetNavButtonState(AddNavButton, selected == "add");
+            SetNavButtonState(ListNavButton, selected == "list");
         }
 
-        private void Sidebar_MouseLeave(object sender, MouseEventArgs e)
+        private static void SetNavButtonState(Button button, bool selected)
         {
-            SidebarColumn.Width = new GridLength(64);
+            button.Background = selected
+                ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(190, 235, 229))
+                : System.Windows.Media.Brushes.White;
+            button.BorderBrush = selected
+                ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(63, 174, 160))
+                : new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(214, 232, 232));
+            button.BorderThickness = selected ? new Thickness(2) : new Thickness(1);
+            button.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(22, 125, 125));
         }
 
         private ChromiumWebBrowser ActiveBrowser

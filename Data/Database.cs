@@ -336,8 +336,8 @@ SELECT
     TRIM(Shift) AS 'Buổi',
     CASE WHEN Status = 'Đã trả lịch' THEN 'Đã trả hẹn' ELSE Status END AS 'Trạng thái'
 FROM Appointments
-WHERE date(AppointmentDate) >= date(@from)
-AND date(AppointmentDate) <= date(@to)";
+WHERE AppointmentDate >= @from
+AND AppointmentDate < @toExclusive";
 
                     if (!string.IsNullOrWhiteSpace(shift) && shift != "Cả ngày")
                     {
@@ -363,8 +363,10 @@ ORDER BY
                     cmd.Parameters.AddWithValue(
                         "@from", from.Date.ToString("yyyy-MM-dd"));
 
+                    // Ngày hẹn được lưu theo yyyy-MM-dd. Dùng mốc kết thúc loại trừ
+                    // để bao gồm trọn ngày người dùng chọn và không lọt ngày kế tiếp.
                     cmd.Parameters.AddWithValue(
-                        "@to", to.Date.ToString("yyyy-MM-dd"));
+                        "@toExclusive", to.Date.AddDays(1).ToString("yyyy-MM-dd"));
 
                     da.SelectCommand = cmd;
                     da.Fill(table);
