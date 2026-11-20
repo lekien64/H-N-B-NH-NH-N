@@ -8,7 +8,7 @@
  MinHeight="680"
  MinWidth="1050"
  WindowStartupLocation="CenterScreen"
- Background="#EAF3F4">
+ Background="#EAF3F4" Language="vi-VN">
 
  <Grid>
   <Grid.ColumnDefinitions>
@@ -69,9 +69,23 @@
     <DockPanel Grid.Row="1" Height="40" Margin="0,0,0,8" LastChildFill="True" VerticalAlignment="Center">
      <Button Content="Mở" Width="58" Height="32" VerticalAlignment="Center" DockPanel.Dock="Right" Click="OpenUrl_Click"/>
      <Button Content="DOM" ToolTip="Kiểm tra cấu trúc trang" Width="54" Height="32" Margin="0,0,5,0" DockPanel.Dock="Right" Click="InspectDom_Click"/>
-     <Button Content="⛶ Vừa màn hình" ToolTip="Đặt mức thu phóng về 100%" Width="112" Height="32" Margin="0,0,5,0" DockPanel.Dock="Right" Click="BrowserFit_Click"/>
-     <Button Content="＋" ToolTip="Phóng to trang" Width="36" Height="32" Margin="0,0,4,0" DockPanel.Dock="Right" Click="BrowserZoomIn_Click"/>
-     <Button Content="−" ToolTip="Thu nhỏ trang" Width="36" Height="32" Margin="0,0,5,0" DockPanel.Dock="Right" Click="BrowserZoomOut_Click"/>
+     <Button Width="36" Height="34" Padding="0" Margin="0,0,5,0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" DockPanel.Dock="Right" ToolTip="Vừa màn hình" Click="BrowserFit_Click">
+      <TextBlock Text="⛶" FontSize="23" FontWeight="Normal" VerticalAlignment="Center" HorizontalAlignment="Center" LineHeight="24"/>
+     </Button>
+     <Button Width="36" Height="34" Padding="0" Margin="0,0,4,0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" DockPanel.Dock="Right" ToolTip="Phóng to trang" Click="BrowserZoomIn_Click">
+      <Grid Width="25" Height="25">
+       <Ellipse Width="16" Height="16" Stroke="#17434B" StrokeThickness="2" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1,1,0,0"/>
+       <Path Data="M 14,14 L 23,23" Stroke="#17434B" StrokeThickness="2.5" StrokeStartLineCap="Round"/>
+       <TextBlock Text="+" FontSize="12" FontWeight="Bold" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="4,0,0,0"/>
+      </Grid>
+     </Button>
+     <Button Width="36" Height="34" Padding="0" Margin="0,0,5,0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" DockPanel.Dock="Right" ToolTip="Thu nhỏ trang" Click="BrowserZoomOut_Click">
+      <Grid Width="25" Height="25">
+       <Ellipse Width="16" Height="16" Stroke="#17434B" StrokeThickness="2" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1,1,0,0"/>
+       <Path Data="M 14,14 L 23,23" Stroke="#17434B" StrokeThickness="2.5" StrokeStartLineCap="Round"/>
+       <TextBlock Text="−" FontSize="13" FontWeight="Bold" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="4,0,0,0"/>
+      </Grid>
+     </Button>
      <ComboBox x:Name="UrlBox" IsEditable="True" IsTextSearchEnabled="False" StaysOpenOnEdit="True"
                KeyDown="UrlBox_KeyDown" GotKeyboardFocus="UrlBox_GotKeyboardFocus" Height="34" VerticalAlignment="Center" Padding="8" VerticalContentAlignment="Center"/>
     </DockPanel>
@@ -124,9 +138,23 @@
      <DockPanel Grid.Row="1" Height="40" Margin="0,0,0,8" LastChildFill="True" VerticalAlignment="Center">
       <Button Content="Mở" Width="52" Height="32" VerticalAlignment="Center" DockPanel.Dock="Right" Click="AddOpenUrl_Click"/>
       <Button Content="DOM" ToolTip="Kiểm tra cấu trúc trang" Width="48" Height="32" Margin="0,0,5,0" DockPanel.Dock="Right" Click="InspectAddDom_Click"/>
-      <Button Content="⛶ Vừa màn hình" ToolTip="Đặt mức thu phóng về 100%" Width="112" Height="32" Margin="0,0,5,0" DockPanel.Dock="Right" Click="AddBrowserFit_Click"/>
-      <Button Content="＋" ToolTip="Phóng to trang" Width="34" Height="32" Margin="0,0,4,0" DockPanel.Dock="Right" Click="AddBrowserZoomIn_Click"/>
-      <Button Content="−" ToolTip="Thu nhỏ trang" Width="34" Height="32" Margin="0,0,5,0" DockPanel.Dock="Right" Click="AddBrowserZoomOut_Click"/>
+     <Button Width="36" Height="34" Padding="0" Margin="0,0,5,0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" DockPanel.Dock="Right" ToolTip="Vừa màn hình" Click="AddBrowserFit_Click">
+      <TextBlock Text="⛶" FontSize="23" FontWeight="Normal" VerticalAlignment="Center" HorizontalAlignment="Center" LineHeight="24"/>
+     </Button>
+     <Button Width="36" Height="34" Padding="0" Margin="0,0,4,0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" DockPanel.Dock="Right" ToolTip="Phóng to trang" Click="AddBrowserZoomIn_Click">
+      <Grid Width="25" Height="25">
+       <Ellipse Width="16" Height="16" Stroke="#17434B" StrokeThickness="2" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1,1,0,0"/>
+       <Path Data="M 14,14 L 23,23" Stroke="#17434B" StrokeThickness="2.5" StrokeStartLineCap="Round"/>
+       <TextBlock Text="+" FontSize="12" FontWeight="Bold" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="4,0,0,0"/>
+      </Grid>
+     </Button>
+     <Button Width="36" Height="34" Padding="0" Margin="0,0,5,0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" DockPanel.Dock="Right" ToolTip="Thu nhỏ trang" Click="AddBrowserZoomOut_Click">
+      <Grid Width="25" Height="25">
+       <Ellipse Width="16" Height="16" Stroke="#17434B" StrokeThickness="2" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1,1,0,0"/>
+       <Path Data="M 14,14 L 23,23" Stroke="#17434B" StrokeThickness="2.5" StrokeStartLineCap="Round"/>
+       <TextBlock Text="−" FontSize="13" FontWeight="Bold" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="4,0,0,0"/>
+      </Grid>
+     </Button>
       <ComboBox x:Name="AddUrlBox" IsEditable="True" IsTextSearchEnabled="False" StaysOpenOnEdit="True"
                 KeyDown="AddUrlBox_KeyDown" GotKeyboardFocus="AddUrlBox_GotKeyboardFocus" Height="32" VerticalAlignment="Center" Padding="7" VerticalContentAlignment="Center"/>
      </DockPanel>
@@ -256,14 +284,14 @@
       <UniformGrid Columns="2">
        <StackPanel Margin="0,0,12,10">
         <TextBlock Text="Từ ngày"/>
-        <DatePicker x:Name="FromDatePicker"
+        <DatePicker x:Name="FromDatePicker" Language="vi-VN"
                     Height="34"
                     SelectedDateChanged="FilterSelection_Changed"/>
        </StackPanel>
 
        <StackPanel Margin="0,0,0,10">
         <TextBlock Text="Đến ngày"/>
-        <DatePicker x:Name="ToDatePicker"
+        <DatePicker x:Name="ToDatePicker" Language="vi-VN"
                     Height="34"
                     SelectedDateChanged="FilterSelection_Changed"/>
        </StackPanel>

@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using System.Globalization;
+using System.Threading;
 using System.Windows;
 using CefSharp;
 
@@ -9,6 +11,13 @@ namespace PatientAppointmentManager
     {
         protected override void OnStartup(StartupEventArgs e)
         {
+            // Chuẩn hóa toàn bộ ngày tháng theo Việt Nam: dd/MM/yyyy.
+            var viCulture = new CultureInfo("vi-VN");
+            viCulture.DateTimeFormat.ShortDatePattern = "dd/MM/yy";
+            Thread.CurrentThread.CurrentCulture = viCulture;
+            Thread.CurrentThread.CurrentUICulture = viCulture;
+            CultureInfo.DefaultThreadCurrentCulture = viCulture;
+            CultureInfo.DefaultThreadCurrentUICulture = viCulture;
             var cacheFolder = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "PatientAppointmentManager",

@@ -332,12 +332,12 @@ SELECT
     ExamCode AS 'Mã chỉ định',
     ServiceName AS 'Dịch vụ',
     InjectionStatus AS 'Tiêm thuốc cản quang',
-    AppointmentDate AS 'Ngày hẹn',
+    strftime('%d/%m/%y', AppointmentDate) AS 'Ngày hẹn',
     TRIM(Shift) AS 'Buổi',
     CASE WHEN Status = 'Đã trả lịch' THEN 'Đã trả hẹn' ELSE Status END AS 'Trạng thái'
 FROM Appointments
-WHERE AppointmentDate >= @from
-AND AppointmentDate < @toExclusive";
+WHERE date(AppointmentDate) >= date(@from)
+AND date(AppointmentDate) <= date(@to)";
 
                     if (!string.IsNullOrWhiteSpace(shift) && shift != "Cả ngày")
                     {
@@ -363,10 +363,10 @@ ORDER BY
                     cmd.Parameters.AddWithValue(
                         "@from", from.Date.ToString("yyyy-MM-dd"));
 
-                    // Ngày hẹn được lưu theo yyyy-MM-dd. Dùng mốc kết thúc loại trừ
-                    // để bao gồm trọn ngày người dùng chọn và không lọt ngày kế tiếp.
+                    // So sánh theo ngày lịch, không phụ thuộc phần giờ nếu dữ liệu cũ có lưu kèm giờ.
+                    // Ngày kết thúc là bao gồm: 20/11 đến 21/11 chỉ lấy ngày 20 và 21.
                     cmd.Parameters.AddWithValue(
-                        "@toExclusive", to.Date.AddDays(1).ToString("yyyy-MM-dd"));
+                        "@to", to.Date.ToString("yyyy-MM-dd"));
 
                     da.SelectCommand = cmd;
                     da.Fill(table);
