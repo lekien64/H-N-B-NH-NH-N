@@ -1,9 +1,11 @@
-
 using System;
 using System.Data;
+using System.Text;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using CefSharp;
+using CefSharp.Wpf;
 using PatientAppointmentManager.Data;
 using PatientAppointmentManager.Models;
 
@@ -125,6 +127,261 @@ namespace PatientAppointmentManager
         private void AddReload_Click(object sender, RoutedEventArgs e)
         {
             AddHospitalBrowser.Reload();
+        }
+
+        // Chỉ đọc cấu trúc bảng/cột, không đọc nội dung từng bệnh nhân.
+        private const string DomInspectionScript = @"
+(function () {
+    function clean(value) {
+        return (value || '').replace(/\s+/g, ' ').trim();
+    }
+
+    function visible(element) {
+        if (!element) return false;
+        var style = window.getComputedStyle(element);
+        return style.display !== 'none' &&
+               style.visibility !== 'hidden' &&
+               element.getClientRects().length > 0;
+    }
+
+    var selectors = [
+        'table',
+        '[role=""grid""]',
+        '[role=""table""]',
+        '[role=""treegrid""]',
+        '.ant-table',
+        '.ag-root',
+        '.dataTable',
+        '.table-responsive'
+    ];
+
+    var found = [];
+    var seen = [];
+
+    selectors.forEach(function (selector) {
+        var elements = document.querySelectorAll(selector);
+        for (var i = 0; i < elements.length; i++) {
+            var element = elements[i];
+            if (!visible(element) || seen.indexOf(element) >= 0) continue;
+            seen.push(element);
+
+            var headers = [];
+            var headerNodes = element.querySelectorAll(
+                'thead th, [role=""columnheader""], th'
+            );
+
+            for (var h = 0; h < headerNodes.length && h < 30; h++) {
+                var headerText = clean(headerNodes[h].innerText ||
+                                       headerNodes[h].textContent);
+                if (headerText && headers.indexOf(headerText) < 0)
+                    headers.push(headerText);
+            }
+
+            if (headers.length === 0) {
+                var firstRow = element.querySelector('tr');
+                if (firstRow) {
+                    var cells = firstRow.querySelectorAll('th, td');
+                    for (var c = 0; c < cells.length && c < 30; c++) {
+                        var cellText = clean(cells[c].innerText ||
+                                              cells[c].textContent);
+                        if (cellText) headers.push(cellText);
+                    }
+                }
+            }
+
+            var rowCount = element.querySelectorAll(
+                'tbody tr, [role=""row""]'
+            ).length;
+
+            if (rowCount === 0)
+                rowCount = element.querySelectorAll('tr').length;
+
+            var id = element.id ? '#' + element.id : '';
+            var className = '';
+            if (typeof element.className === 'string' && element.className)
+                className = '.' + element.className.trim().replace(/\s+/g, '.');
+
+            found.push({
+                selector: selector,
+                tag: element.tagName.toLowerCase(),
+                id: id,
+                className: className,
+                rows: rowCount,
+                headers: headers
+            });
+        }
+    });
+
+    var lines = [];
+    lines.push('KIỂM TRA CẤU TRÚC DOM');
+    lines.push('Tên miền: ' + location.origin);
+    lines.push('Số bảng/vùng dữ liệu tìm thấy: ' + found.length);
+    lines.push('');
+
+    if (found.length === 0) {
+        lines.push('Không tìm thấy bảng HTML hoặc vùng dữ liệu theo các selector phổ biến.');
+        lines.push('Website có thể dựng bảng bằng canvas hoặc cấu trúc DOM riêng.');
+    }
+
+    found.forEach(function (item, index) {
+        lines.push('VÙNG ' + (index + 1));
+        lines.push('Phần tử: ' + item.tag);
+        lines.push('Selector dò được: ' + item.selector);
+        lines.push('ID: ' + (item.id || '(không có)'));
+        lines.push('Class: ' + (item.className || '(không có)'));
+        lines.push('Số dòng: ' + item.rows);
+        lines.push('Tiêu đề cột:');
+        if (item.headers.length === 0) {
+            lines.push('  (chưa đọc được tiêu đề)');
+        } else {
+            item.headers.forEach(function (header, headerIndex) {
+                lines.push('  ' + (headerIndex + 1) + '. ' + header);
+            });
+        }
+        lines.push('');
+    });
+
+    lines.push('LƯU Ý: Công cụ chỉ lấy cấu trúc và tiêu đề cột, không lấy mã BN, họ tên hay dữ liệu từng dòng.');
+    return lines.join('\n');
+})()";
+
+        private async Task InspectBrowserDomAsync(
+            ChromiumWebBrowser browser,
+            string browserName)
+        {
+            if (browser == null || !browser.IsBrowserInitialized)
+            {
+                MessageBox.Show(
+                    "Trình duyệt chưa khởi tạo xong. Hãy mở website và thử lại.",
+                    "Chưa sẵn sàng",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            try
+            {
+                var frame = browser.GetMainFrame();
+                if (frame == null || !frame.IsValid)
+                {
+                    MessageBox.Show("Không truy cập được nội dung trang hiện tại.");
+                    return;
+                }
+
+                JavascriptResponse response =
+                    await frame.EvaluateScriptAsync(DomInspectionScript);
+
+                if (!response.Success)
+                {
+                    MessageBox.Show(
+                        "Không thể kiểm tra DOM.\n" + response.Message,
+                        "Lỗi đọc trang",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    return;
+                }
+
+                string report = response.Result as string;
+                if (string.IsNullOrWhiteSpace(report))
+                    report = "Website không trả về thông tin cấu trúc DOM.";
+
+                ShowDomReport(browserName, report);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    "Không thể kiểm tra cấu trúc website.\n\n" + ex.Message,
+                    "Lỗi",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+
+        private void ShowDomReport(string browserName, string report)
+        {
+            var window = new Window
+            {
+                Title = "Kết quả kiểm tra DOM - " + browserName,
+                Width = 760,
+                Height = 620,
+                MinWidth = 520,
+                MinHeight = 400,
+                Owner = this,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Background = System.Windows.Media.Brushes.White
+            };
+
+            var root = new DockPanel { Margin = new Thickness(12) };
+
+            var note = new TextBlock
+            {
+                Text = "Hãy sao chép toàn bộ kết quả và gửi lại để cấu hình bộ đọc chỉ định. Báo cáo không chứa dữ liệu từng bệnh nhân.",
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 0, 0, 10),
+                Foreground = System.Windows.Media.Brushes.DarkSlateGray
+            };
+            DockPanel.SetDock(note, Dock.Top);
+            root.Children.Add(note);
+
+            var output = new TextBox
+            {
+                Text = report,
+                IsReadOnly = true,
+                AcceptsReturn = true,
+                AcceptsTab = true,
+                TextWrapping = TextWrapping.NoWrap,
+                VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+                HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+                FontFamily = new System.Windows.Media.FontFamily("Consolas"),
+                FontSize = 12
+            };
+            root.Children.Add(output);
+
+            var buttons = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Margin = new Thickness(0, 10, 0, 0)
+            };
+
+            var copyButton = new Button
+            {
+                Content = "Sao chép báo cáo",
+                Width = 135,
+                Height = 34,
+                Margin = new Thickness(0, 0, 8, 0)
+            };
+            copyButton.Click += (s, e) =>
+            {
+                Clipboard.SetText(report);
+                MessageBox.Show(window, "Đã sao chép báo cáo DOM.");
+            };
+
+            var closeButton = new Button
+            {
+                Content = "Đóng",
+                Width = 85,
+                Height = 34
+            };
+            closeButton.Click += (s, e) => window.Close();
+
+            buttons.Children.Add(copyButton);
+            buttons.Children.Add(closeButton);
+            DockPanel.SetDock(buttons, Dock.Bottom);
+            root.Children.Add(buttons);
+
+            window.Content = root;
+            window.ShowDialog();
+        }
+
+        private async void InspectDom_Click(object sender, RoutedEventArgs e)
+        {
+            await InspectBrowserDomAsync(HospitalBrowser, "Trình duyệt bệnh viện");
+        }
+
+        private async void InspectAddDom_Click(object sender, RoutedEventArgs e)
+        {
+            await InspectBrowserDomAsync(AddHospitalBrowser, "Trình duyệt thêm lịch");
         }
 
         private void AddAppointment_Click(object sender, RoutedEventArgs e)
