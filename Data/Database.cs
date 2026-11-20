@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS Appointments(
     Department TEXT NOT NULL DEFAULT '',
     ExamCode TEXT NOT NULL DEFAULT '',
     ServiceName TEXT NOT NULL DEFAULT '',
+    InjectionStatus TEXT NOT NULL DEFAULT '',
     AppointmentDate TEXT NOT NULL,
     Shift TEXT NOT NULL,
     Status TEXT NOT NULL DEFAULT 'Đã hẹn',
@@ -70,6 +71,16 @@ CREATE TABLE IF NOT EXISTS AuditLog(
                     {
                         cmd.CommandText =
                             "ALTER TABLE Appointments ADD COLUMN Department TEXT NOT NULL DEFAULT ''";
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+
+                if (!ColumnExists(c, "Appointments", "InjectionStatus"))
+                {
+                    using (var cmd = c.CreateCommand())
+                    {
+                        cmd.CommandText =
+                            "ALTER TABLE Appointments ADD COLUMN InjectionStatus TEXT NOT NULL DEFAULT ''";
                         cmd.ExecuteNonQuery();
                     }
                 }
@@ -144,13 +155,13 @@ AND (@e = '' OR ExamCode = @e)";
 INSERT INTO Appointments
 (
     PatientCode, PatientName, Department,
-    ExamCode, ServiceName, AppointmentDate,
+    ExamCode, ServiceName, InjectionStatus, AppointmentDate,
     Shift, Status, CreatedAt
 )
 VALUES
 (
     @p, @n, @department,
-    @e, @s, @d,
+    @e, @s, @injection, @d,
     @h, 'Đã hẹn', @now
 )";
 
@@ -159,6 +170,7 @@ VALUES
                     cmd.Parameters.AddWithValue("@department", a.Department ?? "");
                     cmd.Parameters.AddWithValue("@e", a.ExamCode ?? "");
                     cmd.Parameters.AddWithValue("@s", a.ServiceName ?? "");
+                    cmd.Parameters.AddWithValue("@injection", a.InjectionStatus ?? "");
                     cmd.Parameters.AddWithValue("@d", a.AppointmentDate.ToString("yyyy-MM-dd"));
                     cmd.Parameters.AddWithValue("@h", a.Shift ?? "");
                     cmd.Parameters.AddWithValue("@now", DateTime.Now.ToString("s"));
@@ -225,6 +237,7 @@ SELECT
     Department AS 'Khoa phòng',
     ExamCode AS 'Mã chỉ định',
     ServiceName AS 'Dịch vụ',
+    InjectionStatus AS 'Tiêm thuốc cản quang',
     AppointmentDate AS 'Ngày hẹn',
     TRIM(Shift) AS 'Buổi',
     Status AS 'Trạng thái'
@@ -275,9 +288,13 @@ ORDER BY
             foreach (DataRow row in table.Rows)
             {
                 string service = Convert.ToString(row["Dịch vụ"]);
+                string explicitStatus = table.Columns.Contains("Tiêm thuốc cản quang")
+                    ? Convert.ToString(row["Tiêm thuốc cản quang"]) : "";
 
-                bool isInjection = IsInjectionService(service);
-                bool isNoInjection = IsExplicitlyNoInjection(service);
+                bool isInjection = explicitStatus == "Có tiêm" ||
+                    (string.IsNullOrWhiteSpace(explicitStatus) && IsInjectionService(service));
+                bool isNoInjection = explicitStatus == "Không tiêm" ||
+                    (string.IsNullOrWhiteSpace(explicitStatus) && IsExplicitlyNoInjection(service));
 
                 if (injectionFilter == "Có tiêm" && isInjection)
                     filtered.ImportRow(row);

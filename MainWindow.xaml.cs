@@ -4,6 +4,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using CefSharp;
 using CefSharp.Wpf;
 using PatientAppointmentManager.Data;
@@ -71,6 +72,24 @@ namespace PatientAppointmentManager
 
             address = uri.AbsoluteUri;
             return true;
+        }
+
+        private void UrlBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                e.Handled = true;
+                OpenUrl_Click(sender, new RoutedEventArgs());
+            }
+        }
+
+        private void AddUrlBox_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                e.Handled = true;
+                AddOpenUrl_Click(sender, new RoutedEventArgs());
+            }
         }
 
         private void OpenUrl_Click(object sender, RoutedEventArgs e)
@@ -391,6 +410,8 @@ namespace PatientAppointmentManager
             string department = (DepartmentBox.Text ?? "").Trim();
             string exam = (ExamCodeBox.Text ?? "").Trim();
             string service = (ServiceBox.Text ?? "").Trim();
+            var injectionItem = InjectionStatusBox.SelectedItem as ComboBoxItem;
+            string injectionStatus = injectionItem == null ? "Không tiêm" : injectionItem.Content.ToString();
 
             if (code.Length == 0 ||
                 name.Length == 0 ||
@@ -428,6 +449,7 @@ namespace PatientAppointmentManager
                     Department = department,
                     ExamCode = exam,
                     ServiceName = service,
+                    InjectionStatus = injectionStatus,
                     AppointmentDate = AppointmentDatePicker.SelectedDate.Value,
                     Shift = selectedShift.Content.ToString()
                 });
@@ -440,6 +462,7 @@ namespace PatientAppointmentManager
                 ExamCodeBox.Clear();
 
                 ServiceBox.Text = "Chụp CLVT";
+                InjectionStatusBox.SelectedIndex = 0;
                 AppointmentDatePicker.SelectedDate = DateTime.Today.AddDays(1);
                 ShiftBox.SelectedIndex = 0;
             }

@@ -18,6 +18,8 @@ namespace PatientAppointmentManager.Models
 
         public string ServiceName { get; set; }
 
+        public string InjectionStatus { get; set; }
+
         public DateTime AppointmentDate { get; set; }
 
         public string Shift { get; set; }

@@ -12,15 +12,15 @@
 
  <Grid>
   <Grid.ColumnDefinitions>
-   <ColumnDefinition Width="205"/>
+   <ColumnDefinition Width="150"/>
    <ColumnDefinition Width="*"/>
   </Grid.ColumnDefinitions>
 
   <!-- SIDEBAR -->
   <Border Grid.Column="0" Background="#142B35">
    <DockPanel>
-    <StackPanel DockPanel.Dock="Top" Margin="18,24,18,28">
-     <TextBlock Text="PATIENT" Foreground="White" FontSize="21" FontWeight="Bold"/>
+    <StackPanel DockPanel.Dock="Top" Margin="12,18,12,20">
+     <TextBlock Text="PATIENT" Foreground="White" FontSize="18" FontWeight="Bold"/>
      <TextBlock Text="APPOINTMENT MANAGER" Foreground="#9BB8BE" FontSize="10" Margin="0,2,0,0"/>
     </StackPanel>
 
@@ -38,7 +38,7 @@
    </DockPanel>
   </Border>
 
-  <Grid Grid.Column="1" Margin="22">
+  <Grid Grid.Column="1" Margin="16">
 
    <!-- TAB 1: TRÌNH DUYỆT -->
    <Grid x:Name="BrowserView" Visibility="Visible">
@@ -70,6 +70,7 @@
              DockPanel.Dock="Right" Click="InspectDom_Click"/>
 
      <TextBox x:Name="UrlBox"
+              KeyDown="UrlBox_KeyDown"
               Height="36"
               Padding="10"
               Text="https://"
@@ -128,6 +129,7 @@
               DockPanel.Dock="Right" Click="InspectAddDom_Click"/>
 
       <TextBox x:Name="AddUrlBox"
+               KeyDown="AddUrlBox_KeyDown"
                Height="32"
                Padding="8"
                Text="https://"
@@ -178,6 +180,14 @@
         <StackPanel Margin="0,0,0,10">
          <TextBlock Text="Mã chỉ định"/>
          <TextBox x:Name="ExamCodeBox" Height="34" Padding="8"/>
+        </StackPanel>
+
+        <StackPanel Margin="0,0,12,10">
+         <TextBlock Text="Tiêm thuốc cản quang"/>
+         <ComboBox x:Name="InjectionStatusBox" Height="34" SelectedIndex="0">
+          <ComboBoxItem Content="Không tiêm"/>
+          <ComboBoxItem Content="Có tiêm"/>
+         </ComboBox>
         </StackPanel>
 
         <StackPanel Margin="0,0,12,10">
