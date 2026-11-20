@@ -8,20 +8,23 @@
  MinHeight="680"
  MinWidth="1050"
  WindowStartupLocation="CenterScreen"
- Background="#F3F6F8">
+ Background="#EAF3F4">
 
  <Grid>
   <Grid.ColumnDefinitions>
-   <ColumnDefinition Width="150"/>
+   <ColumnDefinition Width="164"/>
    <ColumnDefinition Width="*"/>
   </Grid.ColumnDefinitions>
 
   <!-- SIDEBAR -->
-  <Border Grid.Column="0" Background="#142B35">
+  <Border Grid.Column="0" Background="#153D49">
    <DockPanel>
-    <StackPanel DockPanel.Dock="Top" Margin="12,18,12,20">
-     <TextBlock Text="PATIENT" Foreground="White" FontSize="18" FontWeight="Bold"/>
-     <TextBlock Text="APPOINTMENT MANAGER" Foreground="#9BB8BE" FontSize="10" Margin="0,2,0,0"/>
+    <StackPanel DockPanel.Dock="Top" Margin="14,22,12,24">
+     <Border Width="42" Height="42" CornerRadius="14" Background="#DDF2EF" HorizontalAlignment="Left" Margin="0,0,0,12">
+      <TextBlock Text="✚" Foreground="#167D7D" FontSize="25" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+     </Border>
+     <TextBlock Text="PATIENT CARE" Foreground="White" FontSize="17" FontWeight="Bold"/>
+     <TextBlock Text="QUẢN LÝ LỊCH HẸN" Foreground="#B4D2D5" FontSize="9" FontWeight="SemiBold" Margin="0,4,0,0"/>
     </StackPanel>
 
     <StackPanel>
@@ -31,14 +34,15 @@
     </StackPanel>
 
     <TextBlock DockPanel.Dock="Bottom"
-               Text="Dữ liệu lưu trên máy tính"
-               Foreground="#9BB8BE"
+               Text="Dữ liệu lưu an toàn trên máy tính"
+               Foreground="#B4D2D5"
                FontSize="10"
                Margin="18,16"/>
    </DockPanel>
   </Border>
 
-  <Grid Grid.Column="1" Margin="16">
+  <Grid Grid.Column="1" Margin="20">
+   <Grid.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#F4FAFA" Offset="0"/><GradientStop Color="#E6F1F2" Offset="1"/></LinearGradientBrush></Grid.Background>
 
    <!-- TAB 1: TRÌNH DUYỆT -->
    <Grid x:Name="BrowserView" Visibility="Visible">
@@ -50,8 +54,8 @@
 
     <StackPanel Grid.Row="0">
      <TextBlock Text="Trình duyệt bệnh viện"
-                FontSize="26"
-                FontWeight="SemiBold"
+                FontSize="25"
+                FontWeight="Bold"
                 Foreground="#18333D"/>
      <TextBlock Text="Đăng nhập thủ công. Ứng dụng không lưu mật khẩu website."
                 Foreground="#637780"
@@ -79,8 +83,8 @@
 
     <Border Grid.Row="2"
             Background="White"
-            CornerRadius="8"
-            BorderBrush="#DCE5E8"
+            CornerRadius="15"
+            BorderBrush="#D5E7E8"
             BorderThickness="1"
             ClipToBounds="True">
      <cef:ChromiumWebBrowser x:Name="HospitalBrowser" Address="about:blank"/>
@@ -97,8 +101,8 @@
 
     <StackPanel Grid.Row="0">
      <TextBlock Text="Thêm lịch hẹn"
-                FontSize="26"
-                FontWeight="SemiBold"
+                FontSize="25"
+                FontWeight="Bold"
                 Foreground="#18333D"/>
      <TextBlock Text="Mở website riêng hoặc nhập thông tin bệnh nhân thủ công."
                 Foreground="#637780"
@@ -138,8 +142,8 @@
 
      <Border Grid.Row="2"
              Background="White"
-             CornerRadius="8"
-             BorderBrush="#DCE5E8"
+             CornerRadius="15"
+             BorderBrush="#D5E7E8"
              BorderThickness="1"
              ClipToBounds="True">
       <cef:ChromiumWebBrowser x:Name="AddHospitalBrowser" Address="about:blank"/>
@@ -150,10 +154,10 @@
               Header="Nhập thủ công (mở khi cần)"
               IsExpanded="False"
               Margin="0,10,0,0"
-              Background="White"
-              Padding="8">
+              Background="#F8FCFC"
+              Padding="10">
      <ScrollViewer MaxHeight="260" VerticalScrollBarVisibility="Auto">
-      <Border Background="White" CornerRadius="10" Padding="12">
+      <Border Background="#F8FCFC" CornerRadius="13" Padding="14">
        <StackPanel>
         <TextBlock Text="NHẬP LỊCH THỦ CÔNG"
                    FontSize="16"
@@ -239,8 +243,8 @@
 
     <StackPanel Grid.Row="0">
      <TextBlock Text="Lịch đã hẹn"
-                FontSize="26"
-                FontWeight="SemiBold"
+                FontSize="25"
+                FontWeight="Bold"
                 Foreground="#18333D"/>
      <TextBlock Text="Tra cứu, lọc và kiểm soát số ca đã xếp lịch."
                 Foreground="#637780"
@@ -249,7 +253,8 @@
 
     <Border Grid.Row="1"
             Background="White"
-            CornerRadius="10"
+            CornerRadius="16"
+            BorderBrush="#D7E8E9" BorderThickness="1"
             Padding="16"
             Margin="0,0,0,14">
      <StackPanel>
@@ -311,8 +316,8 @@
     </Border>
 
     <Border Grid.Row="2"
-            Background="#E5F2F0"
-            CornerRadius="9"
+            Background="#DDEFEF"
+            CornerRadius="14"
             Padding="16"
             Margin="0,0,0,14">
      <Grid>

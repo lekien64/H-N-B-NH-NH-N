@@ -3,16 +3,91 @@
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  StartupUri="MainWindow.xaml">
  <Application.Resources>
-  <Style x:Key="NavButton" TargetType="Button">
-   <Setter Property="Foreground" Value="#EAF2F3"/>
-   <Setter Property="Background" Value="Transparent"/>
-   <Setter Property="BorderThickness" Value="0"/>
-   <Setter Property="Padding" Value="18,14"/>
-   <Setter Property="HorizontalContentAlignment" Value="Left"/>
-   <Setter Property="FontSize" Value="14"/>
-   <Setter Property="Margin" Value="8,2"/>
+  <SolidColorBrush x:Key="AccentBrush" Color="#168A8A"/>
+  <SolidColorBrush x:Key="AccentDarkBrush" Color="#116B73"/>
+  <SolidColorBrush x:Key="SidebarBrush" Color="#153D49"/>
+  <SolidColorBrush x:Key="InkBrush" Color="#183D48"/>
+  <SolidColorBrush x:Key="MutedBrush" Color="#66818A"/>
+  <SolidColorBrush x:Key="LineBrush" Color="#D4E6E8"/>
+  <SolidColorBrush x:Key="SurfaceBrush" Color="#F9FDFD"/>
+
+  <Style TargetType="TextBlock">
+   <Setter Property="Foreground" Value="{StaticResource InkBrush}"/>
+   <Setter Property="FontFamily" Value="Segoe UI"/>
+   <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
   </Style>
-  <SolidColorBrush x:Key="AccentBrush" Color="#147D78"/>
-  <SolidColorBrush x:Key="SidebarBrush" Color="#142B35"/>
+  <Style TargetType="Button">
+   <Setter Property="Foreground" Value="#17434B"/>
+   <Setter Property="Background" Value="#E5F2F2"/>
+   <Setter Property="BorderBrush" Value="#C8DEDF"/>
+   <Setter Property="BorderThickness" Value="1"/>
+   <Setter Property="Padding" Value="14,8"/>
+   <Setter Property="FontSize" Value="13"/>
+   <Setter Property="FontWeight" Value="SemiBold"/>
+   <Setter Property="Cursor" Value="Hand"/>
+   <Setter Property="Template">
+    <Setter.Value>
+     <ControlTemplate TargetType="Button">
+      <Border x:Name="buttonBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10" Padding="{TemplateBinding Padding}">
+       <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" RecognizesAccessKey="True"/>
+      </Border>
+      <ControlTemplate.Triggers>
+       <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="buttonBorder" Property="Background" Value="#D5ECEB"/><Setter TargetName="buttonBorder" Property="BorderBrush" Value="#9CCBCB"/></Trigger>
+       <Trigger Property="IsPressed" Value="True"><Setter TargetName="buttonBorder" Property="Opacity" Value="0.82"/></Trigger>
+       <Trigger Property="IsEnabled" Value="False"><Setter TargetName="buttonBorder" Property="Opacity" Value="0.45"/></Trigger>
+      </ControlTemplate.Triggers>
+     </ControlTemplate>
+    </Setter.Value>
+   </Setter>
+  </Style>
+  <Style TargetType="TextBox">
+   <Setter Property="Background" Value="#FBFEFE"/><Setter Property="Foreground" Value="#244A53"/>
+   <Setter Property="BorderBrush" Value="#C9DEE0"/><Setter Property="BorderThickness" Value="1"/>
+   <Setter Property="Padding" Value="9,6"/><Setter Property="FontSize" Value="13"/>
+   <Setter Property="VerticalContentAlignment" Value="Center"/>
+  </Style>
+  <Style TargetType="ComboBox">
+   <Setter Property="Background" Value="#FBFEFE"/><Setter Property="Foreground" Value="#244A53"/>
+   <Setter Property="BorderBrush" Value="#C9DEE0"/><Setter Property="BorderThickness" Value="1"/>
+   <Setter Property="Padding" Value="7,4"/><Setter Property="FontSize" Value="13"/>
+  </Style>
+  <Style TargetType="DatePicker">
+   <Setter Property="Background" Value="#FBFEFE"/><Setter Property="Foreground" Value="#244A53"/>
+   <Setter Property="BorderBrush" Value="#C9DEE0"/><Setter Property="BorderThickness" Value="1"/>
+   <Setter Property="Padding" Value="4"/>
+  </Style>
+  <Style TargetType="CheckBox">
+   <Setter Property="Foreground" Value="#315761"/><Setter Property="FontSize" Value="13"/>
+   <Setter Property="Margin" Value="2,4"/>
+  </Style>
+  <Style TargetType="DataGrid">
+   <Setter Property="Background" Value="#FBFEFE"/><Setter Property="Foreground" Value="#244A53"/>
+   <Setter Property="BorderBrush" Value="#D2E4E6"/><Setter Property="BorderThickness" Value="1"/>
+   <Setter Property="GridLinesVisibility" Value="Horizontal"/><Setter Property="HorizontalGridLinesBrush" Value="#E5EFF0"/>
+   <Setter Property="RowBackground" Value="#FFFFFF"/><Setter Property="AlternatingRowBackground" Value="#F1F8F8"/>
+   <Setter Property="CanUserResizeRows" Value="False"/><Setter Property="FontSize" Value="13"/>
+  </Style>
+  <Style TargetType="DataGridColumnHeader">
+   <Setter Property="Background" Value="#E7F2F2"/><Setter Property="Foreground" Value="#28545D"/>
+   <Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Padding" Value="10,9"/>
+   <Setter Property="BorderBrush" Value="#D5E6E7"/>
+  </Style>
+  <Style x:Key="NavButton" TargetType="Button">
+   <Setter Property="Foreground" Value="#EAF7F7"/><Setter Property="Background" Value="Transparent"/>
+   <Setter Property="BorderBrush" Value="Transparent"/><Setter Property="BorderThickness" Value="1"/>
+   <Setter Property="Padding" Value="14,13"/><Setter Property="HorizontalContentAlignment" Value="Left"/>
+   <Setter Property="FontSize" Value="13"/><Setter Property="FontWeight" Value="SemiBold"/><Setter Property="Margin" Value="8,3"/>
+   <Setter Property="Template">
+    <Setter.Value><ControlTemplate TargetType="Button">
+     <Border x:Name="navBorder" Background="{TemplateBinding Background}" CornerRadius="11" Padding="{TemplateBinding Padding}">
+      <ContentPresenter HorizontalAlignment="Left" VerticalAlignment="Center"/>
+     </Border>
+     <ControlTemplate.Triggers>
+      <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="navBorder" Property="Background" Value="#315D68"/></Trigger>
+      <Trigger Property="IsPressed" Value="True"><Setter TargetName="navBorder" Property="Opacity" Value="0.78"/></Trigger>
+     </ControlTemplate.Triggers>
+    </ControlTemplate></Setter.Value>
+   </Setter>
+  </Style>
  </Application.Resources>
 </Application>
