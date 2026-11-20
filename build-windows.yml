@@ -1,0 +1,54 @@
+
+name: Build So hen CT v0.4
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - feature/v0.2-cefsharp-browser
+
+jobs:
+  build:
+    name: Build Windows Application
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Restore and build WPF application
+        shell: pwsh
+        run: |
+          msbuild PatientAppointmentManager.csproj /restore /p:Configuration=Release /p:Platform="Any CPU" /p:PlatformTarget=x64 /p:Prefer32Bit=false
+
+      - name: Locate and collect build files
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path $env:GITHUB_WORKSPACE -Recurse -File -Filter "PatientAppointmentManager.exe" |
+            Where-Object { $_.FullName -notmatch '[\\/](obj|\.git)[\\/]' } |
+            Select-Object -First 1
+
+          if (-not $exe) {
+            Write-Host "PatientAppointmentManager.exe was not found."
+            Get-ChildItem -Path $env:GITHUB_WORKSPACE -Recurse -File |
+              Select-Object -ExpandProperty FullName
+            throw "Build output executable was not found."
+          }
+
+          $publish = Join-Path $env:GITHUB_WORKSPACE "publish"
+          New-Item -ItemType Directory -Force -Path $publish | Out-Null
+          Copy-Item -Path (Join-Path $exe.DirectoryName '*') -Destination $publish -Recurse -Force
+
+          Write-Host "Artifact contents:"
+          Get-ChildItem -Path $publish -Recurse -File | Select-Object -ExpandProperty FullName
+
+      - name: Upload build files
+        uses: actions/upload-artifact@v4
+        with:
+          name: SoHenCT-v0.4-Hybrid-Win64
+          path: publish/
+          if-no-files-found: error

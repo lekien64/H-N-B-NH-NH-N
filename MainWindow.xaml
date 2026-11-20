@@ -16,23 +16,22 @@
    <ColumnDefinition Width="*"/>
   </Grid.ColumnDefinitions>
 
-  <!-- SIDEBAR: luôn hiện biểu tượng, mở rộng khi rê chuột -->
-  <Border x:Name="Sidebar" Grid.Column="0" Background="#153D49"
-          MouseEnter="Sidebar_MouseEnter" MouseLeave="Sidebar_MouseLeave">
-   <DockPanel LastChildFill="True">
-    <StackPanel DockPanel.Dock="Top" Margin="10,18,10,18" HorizontalAlignment="Center">
-     <Border Width="42" Height="42" CornerRadius="14" Background="#DDF2EF" HorizontalAlignment="Center" Margin="0,0,0,10">
-      <TextBlock Text="✚" Foreground="#167D7D" FontSize="25" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-     </Border>
-     <TextBlock Text="SỔ HẸN CT" Foreground="White" FontSize="13" FontWeight="Bold" HorizontalAlignment="Center"/>
-    </StackPanel>
-    <StackPanel DockPanel.Dock="Top">
-     <Button Content="🌐" ToolTip="Trình duyệt" Click="BrowserTab_Click" Style="{StaticResource NavButton}" HorizontalContentAlignment="Center"/>
-     <Button Content="＋" ToolTip="Thêm lịch hẹn" Click="AddTab_Click" Style="{StaticResource NavButton}" HorizontalContentAlignment="Center"/>
-     <Button Content="▦" ToolTip="Lịch đã hẹn" Click="ListTab_Click" Style="{StaticResource NavButton}" HorizontalContentAlignment="Center"/>
-    </StackPanel>
-    <TextBlock DockPanel.Dock="Bottom" Text="Dữ liệu lưu trên máy" Foreground="#B4D2D5" FontSize="9" TextAlignment="Center" Margin="5,12"/>
-   </DockPanel>
+  <!-- SIDEBAR: cố định, chỉ hiển thị ba biểu tượng điều hướng -->
+  <Border x:Name="Sidebar" Grid.Column="0" Background="#153D49">
+   <StackPanel Margin="7,18,7,0">
+    <Button Content="🌐" ToolTip="Trình duyệt" Click="BrowserTab_Click"
+            Height="54" Margin="0,0,0,12" FontSize="27" Padding="2"
+            HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+            Background="#214F5B" Foreground="White" BorderBrush="#3B6871"/>
+    <Button Content="＋" ToolTip="Thêm lịch hẹn" Click="AddTab_Click"
+            Height="54" Margin="0,0,0,12" FontSize="31" Padding="2"
+            HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+            Background="#DDF2EF" Foreground="#167D7D" BorderBrush="#B9DDDA"/>
+    <Button Content="▦" ToolTip="Lịch đã hẹn" Click="ListTab_Click"
+            Height="54" Margin="0,0,0,12" FontSize="29" Padding="2"
+            HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+            Background="#214F5B" Foreground="White" BorderBrush="#3B6871"/>
+   </StackPanel>
   </Border>
 
   <Grid Grid.Column="1" Margin="20">
@@ -49,7 +48,7 @@
 
     <StackPanel Grid.Row="0">
      <TextBlock Text="Trình duyệt"
-                FontSize="25"
+                FontSize="21"
                 FontWeight="Bold"
                 Foreground="#18333D"/>
      <TextBlock Text="Lịch sử truy cập được lưu. Tài khoản chỉ lưu khi bạn chủ động chọn và được mã hóa trên máy này."
@@ -58,18 +57,11 @@
     </StackPanel>
 
     <DockPanel Grid.Row="1" Margin="0,0,0,8" LastChildFill="True">
-     <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-      <Button Content="←" Width="34" Height="34" Margin="0,0,4,0" Click="Back_Click"/>
-      <Button Content="→" Width="34" Height="34" Margin="0,0,4,0" Click="Forward_Click"/>
-      <Button Content="↻" Width="34" Height="34" Margin="0,0,6,0" Click="Reload_Click"/>
-     </StackPanel>
-     <Button Content="Mở" Width="58" Height="34" DockPanel.Dock="Right" Click="OpenUrl_Click"/>
-     <Button Content="Tự điền" ToolTip="Điền tài khoản đã lưu cho website hiện tại" Width="66" Height="34" Margin="0,0,6,0" DockPanel.Dock="Right" Click="FillLogin_Click"/>
-     <Button Content="Lưu đăng nhập" ToolTip="Lưu tài khoản đã mã hóa trên máy này" Width="104" Height="34" Margin="0,0,6,0" DockPanel.Dock="Right" Click="SaveLogin_Click"/>
-     <Button Content="DOM" Width="58" Height="34" Margin="0,0,6,0" DockPanel.Dock="Right" Click="InspectDom_Click"/>
-     <Button Content="⛶" ToolTip="Vừa màn hình (đặt zoom 100%)" Width="38" Height="34" Margin="0,0,6,0" DockPanel.Dock="Right" Click="BrowserFit_Click"/>
-     <Button Content="−" Width="34" Height="34" Margin="0,0,4,0" DockPanel.Dock="Right" Click="BrowserZoomOut_Click"/>
-     <Button Content="+" Width="34" Height="34" Margin="0,0,6,0" DockPanel.Dock="Right" Click="BrowserZoomIn_Click"/>
+     <Button Content="Mở" Width="58" Height="32" DockPanel.Dock="Right" Click="OpenUrl_Click"/>
+     <Button Content="DOM" ToolTip="Kiểm tra cấu trúc trang" Width="54" Height="32" Margin="0,0,5,0" DockPanel.Dock="Right" Click="InspectDom_Click"/>
+     <Button Content="⛶ Vừa màn hình" ToolTip="Đặt mức thu phóng về 100%" Width="112" Height="32" Margin="0,0,5,0" DockPanel.Dock="Right" Click="BrowserFit_Click"/>
+     <Button Content="＋" ToolTip="Phóng to trang" Width="36" Height="32" Margin="0,0,4,0" DockPanel.Dock="Right" Click="BrowserZoomIn_Click"/>
+     <Button Content="−" ToolTip="Thu nhỏ trang" Width="36" Height="32" Margin="0,0,5,0" DockPanel.Dock="Right" Click="BrowserZoomOut_Click"/>
      <ComboBox x:Name="UrlBox" IsEditable="True" IsTextSearchEnabled="False" StaysOpenOnEdit="True"
                KeyDown="UrlBox_KeyDown" GotKeyboardFocus="UrlBox_GotKeyboardFocus" Height="34" Padding="8" VerticalContentAlignment="Center"/>
     </DockPanel>
@@ -96,7 +88,7 @@
 
     <StackPanel Grid.Row="0">
      <TextBlock Text="Thêm lịch hẹn"
-                FontSize="25"
+                FontSize="21"
                 FontWeight="Bold"
                 Foreground="#18333D"/>
      <TextBlock Text="Mở website riêng hoặc nhập thông tin bệnh nhân thủ công."
@@ -117,19 +109,11 @@
                 Margin="0,0,0,8"/>
 
      <DockPanel Grid.Row="1" Margin="0,0,0,8" LastChildFill="True">
-      <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-       <Button Content="←" Width="34" Height="32" Margin="0,0,4,0" Click="AddBack_Click"/>
-       <Button Content="→" Width="34" Height="32" Margin="0,0,4,0" Click="AddForward_Click"/>
-       <Button Content="↻" Width="34" Height="32" Margin="0,0,7,0" Click="AddReload_Click"/>
-      </StackPanel>
-
-      <Button Content="Tự điền" ToolTip="Điền tài khoản đã lưu cho website hiện tại" Width="62" Height="32" Margin="0,0,5,0" DockPanel.Dock="Right" Click="FillLogin_Click"/>
-      <Button Content="Lưu MK" ToolTip="Lưu tài khoản đã mã hóa trên máy này" Width="62" Height="32" Margin="0,0,5,0" DockPanel.Dock="Right" Click="SaveLogin_Click"/>
-      <Button Content="DOM" Width="48" Height="32" Margin="0,0,5,0" DockPanel.Dock="Right" Click="InspectAddDom_Click"/>
-      <Button Content="⛶" ToolTip="Vừa màn hình (zoom 100%)" Width="36" Height="32" Margin="0,0,6,0" DockPanel.Dock="Right" Click="AddBrowserFit_Click"/>
-      <Button Content="−" Width="32" Height="32" Margin="0,0,4,0" DockPanel.Dock="Right" Click="AddBrowserZoomOut_Click"/>
-      <Button Content="+" Width="32" Height="32" Margin="0,0,6,0" DockPanel.Dock="Right" Click="AddBrowserZoomIn_Click"/>
       <Button Content="Mở" Width="52" Height="32" DockPanel.Dock="Right" Click="AddOpenUrl_Click"/>
+      <Button Content="DOM" ToolTip="Kiểm tra cấu trúc trang" Width="48" Height="32" Margin="0,0,5,0" DockPanel.Dock="Right" Click="InspectAddDom_Click"/>
+      <Button Content="⛶ Vừa màn hình" ToolTip="Đặt mức thu phóng về 100%" Width="112" Height="32" Margin="0,0,5,0" DockPanel.Dock="Right" Click="AddBrowserFit_Click"/>
+      <Button Content="＋" ToolTip="Phóng to trang" Width="34" Height="32" Margin="0,0,4,0" DockPanel.Dock="Right" Click="AddBrowserZoomIn_Click"/>
+      <Button Content="−" ToolTip="Thu nhỏ trang" Width="34" Height="32" Margin="0,0,5,0" DockPanel.Dock="Right" Click="AddBrowserZoomOut_Click"/>
       <ComboBox x:Name="AddUrlBox" IsEditable="True" IsTextSearchEnabled="False" StaysOpenOnEdit="True"
                 KeyDown="AddUrlBox_KeyDown" GotKeyboardFocus="AddUrlBox_GotKeyboardFocus" Height="32" Padding="7" VerticalContentAlignment="Center"/>
      </DockPanel>
