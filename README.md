@@ -82,3 +82,16 @@ Lưu ý kiểm thử: phân loại Có tiêm/Không tiêm hiện dựa trên t�
 - Chuẩn hóa dấu tiếng Việt trước khi phân loại Có tiêm/Không tiêm; ưu tiên cụm phủ định trước cụm khẳng định, không dùng riêng từ chung `cản quang` để kết luận Có tiêm.
 - Tăng chiều cao tự động cửa sổ tạo lịch, cho phép co giãn và căn giữa nội dung nút Tạo lịch hẹn/Hủy để không bị cắt.
 - Trường hợp dịch vụ vẫn không đủ dữ liệu để kết luận vẫn giữ trạng thái Chưa xác định, không tự đoán.
+
+## v0.5.7 - Hoàn thiện thao tác lịch và giao diện thông báo
+
+- Bỏ nút DOM khỏi giao diện người dùng; giữ nguyên phần mã đọc cấu trúc nội bộ để phục vụ phát triển.
+- Thay nút Giữ lịch bằng Đổi lịch. Đổi lịch chỉ cập nhật ngày/buổi trên bản ghi đang hẹn và ghi nhật ký thao tác, không tạo bản ghi mới.
+- Quy tắc thao tác: chưa có lịch hoặc đã trả hẹn chỉ được Tạo lịch hẹn; đang có lịch được Đổi lịch hoặc Trả hẹn.
+- Trạng thái Chưa xác định vẫn cho phép tạo lịch, hiển thị cảnh báo và lưu nguyên trạng thái này.
+- Bộ lọc Tiêm thuốc cản quang bổ sung Chưa xác định; Tất cả vẫn bao gồm mọi trạng thái. Tổng số và số ca còn hẹn tiếp tục tính cả ca chưa xác định.
+- Đọc tên dịch vụ đầy đủ từ nội dung Popover đã có trong DOM thông qua aria-describedby, không mô phỏng rê chuột hoặc chờ tooltip; nếu không có nội dung đầy đủ thì giữ dữ liệu đọc được và phân loại an toàn là Chưa xác định.
+- Chuẩn hóa các hộp thông báo của ứng dụng thành hộp thoại bo góc, nút đồng nhất. Tăng chiều cao nút trong cửa sổ tạo/đổi lịch để tránh hụt chữ.
+- Giữ nguyên cơ sở dữ liệu hiện có, không xóa lịch cũ; không thay đổi CefSharp 109.1.110 và .NET Framework 4.8.
+
+**Trạng thái kiểm tra:** Đã kiểm tra XML XAML/Project và rà soát các thay đổi mã nguồn. Môi trường tạo gói hiện tại không có MSBuild/Visual Studio nên chưa thể xác nhận biên dịch. Cần chạy GitHub Actions và kiểm tra thực tế trên Windows 7/Windows 11 trước khi sử dụng.

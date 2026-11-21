@@ -425,15 +425,50 @@ ORDER BY
                     (string.IsNullOrWhiteSpace(explicitStatus) && IsInjectionService(service));
                 bool isNoInjection = explicitStatus == "Không tiêm" ||
                     (string.IsNullOrWhiteSpace(explicitStatus) && IsExplicitlyNoInjection(service));
+                bool isUnknown = explicitStatus == "Chưa xác định" ||
+                    (!isInjection && !isNoInjection);
 
                 if (injectionFilter == "Có tiêm" && isInjection)
                     filtered.ImportRow(row);
-
                 else if (injectionFilter == "Không tiêm" && isNoInjection)
+                    filtered.ImportRow(row);
+                else if (injectionFilter == "Chưa xác định" && isUnknown)
                     filtered.ImportRow(row);
             }
 
             return filtered;
+        }
+
+        public static void UpdateAppointmentSchedule(long id, DateTime appointmentDate, string shift)
+        {
+            using (var c = new SQLiteConnection(ConnectionString))
+            {
+                c.Open();
+                using (var tx = c.BeginTransaction())
+                using (var cmd = c.CreateCommand())
+                {
+                    cmd.Transaction = tx;
+                    cmd.CommandText = @"UPDATE Appointments
+SET AppointmentDate=@date, Shift=@shift
+WHERE Id=@id AND Status='Đã hẹn'";
+                    cmd.Parameters.AddWithValue("@date", appointmentDate.Date.ToString("yyyy-MM-dd"));
+                    cmd.Parameters.AddWithValue("@shift", shift ?? "");
+                    cmd.Parameters.AddWithValue("@id", id);
+                    if (cmd.ExecuteNonQuery() == 0)
+                        throw new InvalidOperationException("Lịch không còn hiệu lực hoặc đã được trả hẹn.");
+                    using (var log = c.CreateCommand())
+                    {
+                        log.Transaction = tx;
+                        log.CommandText = @"INSERT INTO AuditLog(AppointmentId, Action, ActionAt, Note)
+VALUES(@id, 'Đổi lịch', @now, @note)";
+                        log.Parameters.AddWithValue("@id", id);
+                        log.Parameters.AddWithValue("@now", DateTime.Now.ToString("s"));
+                        log.Parameters.AddWithValue("@note", appointmentDate.ToString("dd/MM/yyyy") + " - " + (shift ?? ""));
+                        log.ExecuteNonQuery();
+                    }
+                    tx.Commit();
+                }
+            }
         }
 
         public static void Return(long id)
