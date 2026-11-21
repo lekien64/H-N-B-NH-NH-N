@@ -8,6 +8,7 @@ using System.Web.Script.Serialization;
 using System.Security.Cryptography;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using CefSharp;
 using CefSharp.Wpf;
