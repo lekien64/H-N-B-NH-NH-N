@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Data;
 using System.Text;
 using System.Threading.Tasks;
@@ -390,50 +390,82 @@ namespace PatientAppointmentManager
 
         private const string HospitalScanScript = @"
 (function () {
-  function clean(v) { return (v || '').replace(/\s+/g, ' ').trim(); }
+  function clean(v) {
+    return (v || '').replace(/\s+/g, ' ').replace(/[↕⇅▼▲]/g, '').trim();
+  }
   function visible(el) {
     if (!el) return false;
     var s = window.getComputedStyle(el);
     return s.display !== 'none' && s.visibility !== 'hidden' && el.getClientRects().length > 0;
   }
-  var tables = Array.prototype.slice.call(document.querySelectorAll('table')).filter(visible);
+  function textOf(el) { return clean(el ? (el.innerText || el.textContent || '') : ''); }
+  function headerCells(table) {
+    var nodes = table.querySelectorAll('thead th, thead td, tr:first-child th, tr:first-child td, [role=columnheader]');
+    var out = [];
+    for (var i=0;i<nodes.length;i++) {
+      // Giữ cả ô tiêu đề rỗng (ví dụ cột STT đầu bảng) để chỉ số cột khớp với row.cells.
+      out.push(textOf(nodes[i]));
+    }
+    return out;
+  }
+  function norm(s) {
+    return clean(s).toLowerCase().normalize ? clean(s).toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/đ/g,'d') : clean(s).toLowerCase();
+  }
+  var candidates = Array.prototype.slice.call(document.querySelectorAll('table,[role=grid],[role=table]')).filter(visible);
   var chosen = null, chosenHeaders = [], chosenScore = -1;
-  tables.forEach(function(t) {
-    var hs = Array.prototype.slice.call(t.querySelectorAll('thead th')).map(function(x){return clean(x.innerText || x.textContent);});
-    var joined = hs.join('|').toLowerCase();
-    var score = (joined.indexOf('số phiếu') >= 0 || joined.indexOf('so phieu') >= 0 ? 4 : 0)
-      + (joined.indexOf('mã bn') >= 0 || joined.indexOf('ma bn') >= 0 ? 3 : 0)
-      + (joined.indexOf('tên bệnh nhân') >= 0 || joined.indexOf('ten benh nhan') >= 0 ? 2 : 0)
-      + (joined.indexOf('thời gian chỉ định') >= 0 || joined.indexOf('thoi gian chi dinh') >= 0 ? 1 : 0);
+  candidates.forEach(function(t) {
+    var hs = headerCells(t);
+    var joined = norm(hs.join('|'));
+    var score = (joined.indexOf('so phieu') >= 0 ? 5 : 0)
+      + (joined.indexOf('ma bn') >= 0 ? 5 : 0)
+      + (joined.indexOf('ten benh nhan') >= 0 ? 2 : 0)
+      + (joined.indexOf('thoi gian chi dinh') >= 0 ? 1 : 0);
     if (score > chosenScore) { chosen=t; chosenHeaders=hs; chosenScore=score; }
   });
-  if (!chosen || chosenScore < 5) return JSON.stringify({error:'Không tìm thấy bảng chỉ định có các cột Số phiếu và Mã BN. Hãy mở đúng trang danh sách chỉ định.'});
-  function indexOfHeader(keys) {
+  if (!chosen || chosenScore < 10) return JSON.stringify({error:'Không tìm thấy bảng có đồng thời tiêu đề Số phiếu và Mã BN. Hãy mở trang danh sách chỉ định.'});
+
+  function findIndex(keys) {
     for (var i=0;i<chosenHeaders.length;i++) {
-      var h=clean(chosenHeaders[i]).toLowerCase();
+      var h=norm(chosenHeaders[i]);
       for (var k=0;k<keys.length;k++) if (h===keys[k]) return i;
     }
     return -1;
   }
   var ix = {
-    receipt:indexOfHeader(['số phiếu','so phieu']),
-    patient:indexOfHeader(['mã bn','ma bn']),
-    name:indexOfHeader(['tên bệnh nhân','ten benh nhan']),
-    age:indexOfHeader(['tuổi','tuoi']),
-    dept:indexOfHeader(['khoa/phòng chỉ định','khoa/phong chi dinh']),
-    time:indexOfHeader(['thời gian chỉ định','thoi gian chi dinh']),
-    service:indexOfHeader(['tên dịch vụ','ten dich vu']),
-    room:indexOfHeader(['phòng','phong'])
+    receipt:findIndex(['so phieu']),
+    patient:findIndex(['ma bn']),
+    name:findIndex(['ten benh nhan']),
+    age:findIndex(['tuoi']),
+    dept:findIndex(['khoa/phong chi dinh','khoa phong chi dinh']),
+    time:findIndex(['thoi gian chi dinh']),
+    service:findIndex(['ten dich vu']),
+    room:findIndex(['phong'])
   };
-  function cell(row, idx) { var c=idx>=0 ? row.cells[idx] : null; return c ? clean(c.innerText || c.textContent) : ''; }
-  var rows = Array.prototype.slice.call(chosen.querySelectorAll('tbody tr'));
+  var rowNodes = chosen.querySelectorAll('tbody tr, [role=row]');
+  var rows = Array.prototype.slice.call(rowNodes);
   if (!rows.length) rows = Array.prototype.slice.call(chosen.querySelectorAll('tr')).slice(1);
-  var data=[];
+
+  function cell(row, idx) {
+    if (idx < 0) return '';
+    var cells = row.querySelectorAll('td,th,[role=gridcell],[role=rowheader]');
+    return idx < cells.length ? textOf(cells[idx]) : '';
+  }
+  var data = [];
   rows.forEach(function(r) {
-    var o={receiptCode:cell(r,ix.receipt),patientCode:cell(r,ix.patient),patientName:cell(r,ix.name),age:cell(r,ix.age),department:cell(r,ix.dept),orderedAt:cell(r,ix.time),serviceName:cell(r,ix.service),room:cell(r,ix.room)};
-    if (o.receiptCode || o.patientCode) data.push(o);
+    if (!visible(r)) return;
+    var o = {
+      receiptCode:cell(r,ix.receipt),
+      patientCode:cell(r,ix.patient),
+      patientName:cell(r,ix.name),
+      age:cell(r,ix.age),
+      department:cell(r,ix.dept),
+      orderedAt:cell(r,ix.time),
+      serviceName:cell(r,ix.service),
+      room:cell(r,ix.room)
+    };
+    if (o.receiptCode && o.patientCode && !/so phieu|ma bn/i.test(o.receiptCode + ' ' + o.patientCode)) data.push(o);
   });
-  return JSON.stringify({headers:chosenHeaders,rowCount:data.length,rows:data});
+  return JSON.stringify({headers:chosenHeaders,rowCount:data.length,rows:data,debug:{candidateRows:rows.length,headerCount:chosenHeaders.length,selector:chosen.tagName}});
 })()";
 
         private async void ScanHospitalList_Click(object sender, RoutedEventArgs e)
@@ -457,7 +489,12 @@ namespace PatientAppointmentManager
                 var payload = serializer.Deserialize<Dictionary<string, object>>(Convert.ToString(response.Result));
                 if (payload.ContainsKey("error")) { MessageBox.Show(Convert.ToString(payload["error"]), "Quét danh sách"); return; }
                 var rows = payload.ContainsKey("rows") ? payload["rows"] as System.Collections.ArrayList : null;
-                if (rows == null || rows.Count == 0) { MessageBox.Show("Bảng tìm thấy nhưng không có dòng dữ liệu. Hãy chuyển sang trang có danh sách bệnh nhân.", "Quét danh sách"); return; }
+                if (rows == null || rows.Count == 0)
+                {
+                    string debug = payload.ContainsKey("debug") ? new JavaScriptSerializer().Serialize(payload["debug"]) : "Không có thông tin chẩn đoán";
+                    MessageBox.Show("Đã tìm thấy bảng nhưng chưa đọc được dòng bệnh nhân.\n\nChi tiết: " + debug + "\n\nHãy gửi ảnh này cùng báo cáo DOM để điều chỉnh bộ đọc.", "Quét danh sách");
+                    return;
+                }
                 var results = new List<HospitalScanRow>();
                 foreach (var item in rows)
                 {
@@ -472,6 +509,11 @@ namespace PatientAppointmentManager
                     if (match != null) { r.Status="ĐÃ CÓ LỊCH"; r.ExistingAppointmentId=match.Id; r.ExistingAppointmentDate=match.AppointmentDate.ToString("dd/MM/yyyy"); r.ExistingShift=match.Shift; }
                     else r.Status="CHƯA CÓ LỊCH";
                     results.Add(r);
+                }
+                if (results.Count == 0)
+                {
+                    MessageBox.Show("Đã đọc được bảng nhưng không có dòng nào có đủ Số phiếu và Mã BN. Hãy kiểm tra tiêu đề/cấu trúc hàng trong báo cáo DOM.", "Quét danh sách");
+                    return;
                 }
                 ShowHospitalScanResults(results);
             }

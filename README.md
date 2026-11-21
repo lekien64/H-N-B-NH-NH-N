@@ -47,3 +47,12 @@ Lưu ý kiểm thử: phân loại Có tiêm/Không tiêm hiện dựa trên t�
 - Thêm tham chiếu tường minh `System.Web` bên cạnh `System.Web.Extensions` để WPF MarkupCompilePass1/MSBuild resolve được assembly phụ thuộc.
 - Giữ nguyên .NET Framework 4.8 và CefSharp 109.1.110 để không làm mất mục tiêu Windows 7.
 - Cảnh báo NU1903 của CefSharp vẫn cần được đánh giá riêng; không nâng phiên bản tự động vì có thể mất tương thích Windows 7.
+
+
+## v0.5.3 - Sửa bộ đọc DOM bảng chỉ định
+
+- Không còn phụ thuộc riêng vào `thead th`; lấy tiêu đề từ `thead`, hàng đầu tiên hoặc ARIA columnheader.
+- Hỗ trợ bảng HTML và bảng có ARIA role grid/table/row.
+- Chuẩn hóa tiêu đề tiếng Việt có dấu/không dấu trước khi ánh xạ cột.
+- Thêm thông tin chẩn đoán số hàng/tiêu đề khi bảng được tìm thấy nhưng không đọc được bệnh nhân.
+- Giữ nguyên .NET Framework 4.8 và CefSharp 109.
