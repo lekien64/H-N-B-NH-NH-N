@@ -52,7 +52,6 @@
     <Grid.RowDefinitions>
      <RowDefinition Height="Auto"/>
      <RowDefinition Height="Auto"/>
-     <RowDefinition Height="Auto"/>
      <RowDefinition Height="*"/>
     </Grid.RowDefinitions>
 
@@ -61,14 +60,11 @@
                 FontSize="21"
                 FontWeight="Bold"
                 Foreground="#18333D"/>
-     <TextBlock Text="Lịch sử truy cập được lưu. Tài khoản chỉ lưu khi bạn chủ động chọn và được mã hóa trên máy này."
-                Foreground="#637780"
-                Margin="0,6,0,14"/>
     </StackPanel>
 
     <DockPanel Grid.Row="1" Height="40" Margin="0,0,0,8" LastChildFill="True" VerticalAlignment="Center">
-     <Button Content="Mở" Width="58" Height="32" VerticalAlignment="Center" DockPanel.Dock="Right" Click="OpenUrl_Click"/>
-     <Button Content="DOM" ToolTip="Kiểm tra cấu trúc trang" Width="54" Height="32" Margin="0,0,5,0" DockPanel.Dock="Right" Click="InspectDom_Click"/>
+     <Button Content="Mở" Width="58" Height="32" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" VerticalAlignment="Center" DockPanel.Dock="Right" Click="OpenUrl_Click"/>
+     <Button Content="DOM" ToolTip="Kiểm tra cấu trúc trang" Width="54" Height="32" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Margin="0,0,5,0" DockPanel.Dock="Right" Click="InspectDom_Click"/>
      <Button Width="36" Height="34" Padding="0" Margin="0,0,5,0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" DockPanel.Dock="Right" ToolTip="Vừa màn hình" Click="BrowserFit_Click">
       <TextBlock Text="⛶" FontSize="23" FontWeight="Normal" VerticalAlignment="Center" HorizontalAlignment="Center" LineHeight="24"/>
      </Button>
@@ -89,9 +85,7 @@
      <ComboBox x:Name="UrlBox" IsEditable="True" IsTextSearchEnabled="False" StaysOpenOnEdit="True"
                KeyDown="UrlBox_KeyDown" GotKeyboardFocus="UrlBox_GotKeyboardFocus" Height="34" VerticalAlignment="Center" Padding="8" VerticalContentAlignment="Center"/>
     </DockPanel>
-    <TextBlock Grid.Row="2" Text="Các trang đang mở · Lịch sử truy cập được lưu tự động"
-               VerticalAlignment="Center" Foreground="#637780" Margin="2,0,0,8"/>
-    <Border Grid.Row="3" Background="White" CornerRadius="15" BorderBrush="#D5E7E8" BorderThickness="1" ClipToBounds="True">
+    <Border Grid.Row="2" Background="White" CornerRadius="15" BorderBrush="#D5E7E8" BorderThickness="1" ClipToBounds="True">
      <Grid>
       <TabControl x:Name="BrowserTabsControl" Margin="0,0,44,0" SelectionChanged="BrowserTabsControl_SelectionChanged">
        <TabItem Header="Trang 1">
@@ -118,26 +112,17 @@
                 FontSize="21"
                 FontWeight="Bold"
                 Foreground="#18333D"/>
-     <TextBlock Text="Mở website riêng hoặc nhập thông tin bệnh nhân thủ công."
-                Foreground="#637780"
-                Margin="0,6,0,12"/>
     </StackPanel>
 
     <Grid Grid.Row="1" MinHeight="300">
      <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
-      <RowDefinition Height="Auto"/>
       <RowDefinition Height="*"/>
      </Grid.RowDefinitions>
 
-     <TextBlock Grid.Row="0"
-                Text="Trình duyệt lấy dữ liệu bệnh viện"
-                FontWeight="SemiBold"
-                Margin="0,0,0,8"/>
-
-     <DockPanel Grid.Row="1" Height="40" Margin="0,0,0,8" LastChildFill="True" VerticalAlignment="Center">
-      <Button Content="Mở" Width="52" Height="32" VerticalAlignment="Center" DockPanel.Dock="Right" Click="AddOpenUrl_Click"/>
-      <Button Content="DOM" ToolTip="Kiểm tra cấu trúc trang" Width="48" Height="32" Margin="0,0,5,0" DockPanel.Dock="Right" Click="InspectAddDom_Click"/>
+     <DockPanel Grid.Row="0" Height="40" Margin="0,0,0,8" LastChildFill="True" VerticalAlignment="Center">
+      <Button Content="Mở" Width="52" Height="32" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" VerticalAlignment="Center" DockPanel.Dock="Right" Click="AddOpenUrl_Click"/>
+      <Button Content="DOM" ToolTip="Kiểm tra cấu trúc trang" Width="48" Height="32" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Margin="0,0,5,0" DockPanel.Dock="Right" Click="InspectAddDom_Click"/>
      <Button Width="36" Height="34" Padding="0" Margin="0,0,5,0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" DockPanel.Dock="Right" ToolTip="Vừa màn hình" Click="AddBrowserFit_Click">
       <TextBlock Text="⛶" FontSize="23" FontWeight="Normal" VerticalAlignment="Center" HorizontalAlignment="Center" LineHeight="24"/>
      </Button>
@@ -159,7 +144,7 @@
                 KeyDown="AddUrlBox_KeyDown" GotKeyboardFocus="AddUrlBox_GotKeyboardFocus" Height="32" VerticalAlignment="Center" Padding="7" VerticalContentAlignment="Center"/>
      </DockPanel>
 
-     <Border Grid.Row="2"
+     <Border Grid.Row="1"
              Background="White"
              CornerRadius="15"
              BorderBrush="#D5E7E8"
@@ -325,12 +310,6 @@
                 Checked="Filter_Changed"
                 Unchecked="Filter_Changed"/>
 
-      <Button Content="Áp dụng bộ lọc"
-              Width="145"
-              Height="34"
-              HorizontalAlignment="Left"
-              Margin="0,12,0,0"
-              Click="Refresh_Click"/>
      </StackPanel>
     </Border>
 
@@ -345,28 +324,26 @@
        <ColumnDefinition Width="*"/>
       </Grid.ColumnDefinitions>
 
-      <StackPanel Grid.Column="0">
-       <TextBlock Text="TỔNG SỐ CA"
-                  FontSize="11"
-                  FontWeight="SemiBold"
-                  Foreground="#526C70"/>
-       <TextBlock x:Name="TotalCountText"
-                  Text="0 ca"
-                  FontSize="22"
-                  FontWeight="Bold"
-                  Foreground="#24514D"/>
+      <StackPanel Grid.Column="0" Margin="0,0,12,0">
+       <TextBlock Text="TỔNG SỐ CA" FontSize="11" FontWeight="SemiBold" Foreground="#526C70"/>
+       <TextBlock x:Name="TotalCountText" Text="0 ca" FontSize="22" FontWeight="Bold" Foreground="#24514D"/>
+       <WrapPanel Margin="0,5,0,0">
+        <TextBlock Text="Có tiêm: " Foreground="#526C70" FontSize="12"/>
+        <TextBlock x:Name="TotalInjectionCountText" Text="0" FontWeight="SemiBold" Foreground="#24514D" FontSize="12"/>
+        <TextBlock Text="   Không tiêm: " Foreground="#526C70" FontSize="12" Margin="12,0,0,0"/>
+        <TextBlock x:Name="TotalNoInjectionCountText" Text="0" FontWeight="SemiBold" Foreground="#24514D" FontSize="12"/>
+       </WrapPanel>
       </StackPanel>
 
-      <StackPanel Grid.Column="1">
-       <TextBlock Text="SỐ CA CÒN HẸN"
-                  FontSize="11"
-                  FontWeight="SemiBold"
-                  Foreground="#526C70"/>
-       <TextBlock x:Name="ActiveCountText"
-                  Text="0 ca"
-                  FontSize="22"
-                  FontWeight="Bold"
-                  Foreground="#147D78"/>
+      <StackPanel Grid.Column="1" Margin="12,0,0,0">
+       <TextBlock Text="SỐ CA CÒN HẸN" FontSize="11" FontWeight="SemiBold" Foreground="#526C70"/>
+       <TextBlock x:Name="ActiveCountText" Text="0 ca" FontSize="22" FontWeight="Bold" Foreground="#147D78"/>
+       <WrapPanel Margin="0,5,0,0">
+        <TextBlock Text="Có tiêm: " Foreground="#526C70" FontSize="12"/>
+        <TextBlock x:Name="ActiveInjectionCountText" Text="0" FontWeight="SemiBold" Foreground="#147D78" FontSize="12"/>
+        <TextBlock Text="   Không tiêm: " Foreground="#526C70" FontSize="12" Margin="12,0,0,0"/>
+        <TextBlock x:Name="ActiveNoInjectionCountText" Text="0" FontWeight="SemiBold" Foreground="#147D78" FontSize="12"/>
+       </WrapPanel>
       </StackPanel>
      </Grid>
     </Border>

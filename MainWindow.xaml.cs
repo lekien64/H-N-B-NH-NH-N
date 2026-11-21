@@ -25,7 +25,7 @@ namespace PatientAppointmentManager
 
             AppointmentDatePicker.SelectedDate = DateTime.Today.AddDays(1);
             FromDatePicker.SelectedDate = DateTime.Today;
-            ToDatePicker.SelectedDate = DateTime.Today.AddDays(30);
+            ToDatePicker.SelectedDate = DateTime.Today;
 
             RegisterBrowser(HospitalBrowser);
             LoadBrowserHistory(UrlBox);
@@ -726,9 +726,7 @@ namespace PatientAppointmentManager
 
             if (to.Date < from.Date)
             {
-                TotalCountText.Text = "0 ca";
-                ActiveCountText.Text = "0 ca";
-
+                ResetAppointmentCounters();
                 MessageBox.Show("Ngày đến phải bằng hoặc sau ngày bắt đầu.");
                 return;
             }
@@ -743,35 +741,110 @@ namespace PatientAppointmentManager
 
             try
             {
-                DataTable data = Database.GetAppointments(
+                // Bộ đếm luôn dựa trên toàn bộ lịch trong khoảng ngày/buổi,
+                // không bị ảnh hưởng bởi bộ lọc tiêm hoặc tùy chọn ẩn lịch đã trả.
+                DataTable allData = Database.GetAppointments(
+                    from.Date, to.Date, shift, true, "Tất cả");
+
+                int totalCount = allData.Rows.Count;
+                int totalInjectionCount = 0;
+                int totalNoInjectionCount = 0;
+                int activeCount = 0;
+                int activeInjectionCount = 0;
+                int activeNoInjectionCount = 0;
+
+                foreach (DataRow row in allData.Rows)
+                {
+                    string category = GetInjectionCategory(row);
+                    bool isActive = Convert.ToString(row["Trạng thái"]) == "Đã hẹn";
+
+                    if (category == "Có tiêm")
+                    {
+                        totalInjectionCount++;
+                        if (isActive)
+                        {
+                            activeCount++;
+                            activeInjectionCount++;
+                        }
+                    }
+                    else if (category == "Không tiêm")
+                    {
+                        totalNoInjectionCount++;
+                        if (isActive)
+                        {
+                            activeCount++;
+                            activeNoInjectionCount++;
+                        }
+                    }
+                    else if (isActive)
+                    {
+                        // Ca chưa xác định loại tiêm vẫn thuộc tổng số ca còn hẹn.
+                        activeCount++;
+                    }
+                }
+
+                DataTable visibleData = Database.GetAppointments(
                     from.Date,
                     to.Date,
                     shift,
                     IncludeReturnedCheck.IsChecked == true,
                     injectionFilter);
 
-                AppointmentsGrid.ItemsSource = data.DefaultView;
-
-                int totalCount = data.Rows.Count;
-                int activeCount = 0;
-
-                foreach (DataRow row in data.Rows)
-                {
-                    if (Convert.ToString(row["Trạng thái"]) == "Đã hẹn")
-                        activeCount++;
-                }
+                AppointmentsGrid.ItemsSource = visibleData.DefaultView;
 
                 TotalCountText.Text = totalCount + " ca";
+                TotalInjectionCountText.Text = totalInjectionCount.ToString();
+                TotalNoInjectionCountText.Text = totalNoInjectionCount.ToString();
                 ActiveCountText.Text = activeCount + " ca";
+                ActiveInjectionCountText.Text = activeInjectionCount.ToString();
+                ActiveNoInjectionCountText.Text = activeNoInjectionCount.ToString();
             }
             catch (Exception ex)
             {
                 MessageBox.Show(
-                    "Không thể tải danh sách lịch hẹn.\n\n" + ex.Message,
+                    "Không thể tải danh sách lịch hẹn.\\n\\n" + ex.Message,
                     "Lỗi",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
             }
+        }
+
+        private static string GetInjectionCategory(DataRow row)
+        {
+            string explicitStatus = row.Table.Columns.Contains("Tiêm thuốc cản quang")
+                ? Convert.ToString(row["Tiêm thuốc cản quang"]).Trim()
+                : "";
+
+            if (string.Equals(explicitStatus, "Có tiêm", StringComparison.OrdinalIgnoreCase))
+                return "Có tiêm";
+            if (string.Equals(explicitStatus, "Không tiêm", StringComparison.OrdinalIgnoreCase))
+                return "Không tiêm";
+
+            string service = row.Table.Columns.Contains("Dịch vụ")
+                ? Convert.ToString(row["Dịch vụ"]).ToLowerInvariant()
+                : "";
+
+            if (service.Contains("không tiêm") || service.Contains("khong tiem") ||
+                service.Contains("không sử dụng thuốc cản quang") ||
+                service.Contains("không dùng thuốc cản quang") ||
+                service.Contains("khong su dung thuoc can quang"))
+                return "Không tiêm";
+
+            if (service.Contains("tiêm") || service.Contains("tiem"))
+                return "Có tiêm";
+
+            return "";
+        }
+
+        private void ResetAppointmentCounters()
+        {
+            TotalCountText.Text = "0 ca";
+            TotalInjectionCountText.Text = "0";
+            TotalNoInjectionCountText.Text = "0";
+            ActiveCountText.Text = "0 ca";
+            ActiveInjectionCountText.Text = "0";
+            ActiveNoInjectionCountText.Text = "0";
+            AppointmentsGrid.ItemsSource = null;
         }
 
         private void Refresh_Click(object sender, RoutedEventArgs e)
