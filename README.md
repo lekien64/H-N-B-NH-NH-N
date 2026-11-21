@@ -106,3 +106,13 @@ Lưu ý kiểm thử: phân loại Có tiêm/Không tiêm hiện dựa trên t�
 - Existing SQLite data and schema are preserved.
 
 Build status: source package and static XML/JavaScript syntax checks only. A Windows/MSBuild compilation and live hospital-site scan are still required before treating full service extraction as verified.
+
+## v0.5.9 – Appointment grid readability and click-to-open history
+
+- Increased appointment table body text to 15.5 px, header text to 14.5 px, row height to 42 px, and header height to 44 px.
+- Standardized column alignment: patient identifiers/names/department/service left-aligned; ID, order code, injection, appointment date, shift, status, and created date centered. Header alignment follows its column.
+- Strengthened the background colors for morning/afternoon and injection classifications so the states are easier to distinguish.
+- Clicking a browser history entry with the mouse now navigates immediately in the corresponding browser. Keyboard navigation through the history list does not automatically navigate; Enter and the Open button remain available for manually entered URLs.
+- Preserves the v0.5.8 service extraction and appointment data logic.
+
+Validation: XAML and project XML are well-formed. This environment does not have MSBuild/.NET Framework build tools, so a Windows build and live click-to-open test are still required.

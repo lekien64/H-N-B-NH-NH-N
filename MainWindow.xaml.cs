@@ -187,6 +187,39 @@ namespace PatientAppointmentManager
             if (AddUrlBox.Items.Count > 0) AddUrlBox.IsDropDownOpen = true;
         }
 
+        // Chỉ điều hướng khi người dùng click chuột vào một mục lịch sử.
+        // Di chuyển bằng phím mũi tên không tự ý tải trang.
+        private void HistoryItem_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            var item = sender as ComboBoxItem;
+            if (item == null) return;
+
+            var box = ItemsControl.ItemsControlFromItemContainer(item) as ComboBox;
+            if (box == null) return;
+
+            string address = Convert.ToString(item.Content);
+            if (string.IsNullOrWhiteSpace(address)) return;
+
+            box.SelectedItem = address;
+            box.Text = address;
+            box.IsDropDownOpen = false;
+
+            if (box == UrlBox)
+            {
+                string normalized;
+                if (TryGetWebAddress(address, out normalized) && ActiveBrowser != null)
+                    ActiveBrowser.Address = normalized;
+            }
+            else if (box == AddUrlBox)
+            {
+                string normalized;
+                if (TryGetWebAddress(address, out normalized))
+                    AddHospitalBrowser.Address = normalized;
+            }
+
+            e.Handled = true;
+        }
+
         private void UrlBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
@@ -1060,8 +1093,8 @@ namespace PatientAppointmentManager
                 {
                     string shift = Convert.ToString(row["Buổi"]);
                     cell.Background = shift == "Sáng"
-                        ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 244, 204))
-                        : shift == "Chiều" ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 237, 255)) : System.Windows.Media.Brushes.White;
+                        ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 229, 153))
+                        : shift == "Chiều" ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(190, 220, 255)) : System.Windows.Media.Brushes.White;
                     cell.Foreground = shift == "Sáng"
                         ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(125, 83, 0))
                         : new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(28, 83, 145));
@@ -1070,11 +1103,11 @@ namespace PatientAppointmentManager
                 {
                     string injection = Convert.ToString(row["Tiêm thuốc cản quang"]);
                     if (injection == "Có tiêm")
-                    { cell.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 245, 226)); cell.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(24, 112, 55)); }
+                    { cell.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(190, 235, 202)); cell.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(24, 112, 55)); }
                     else if (injection == "Không tiêm")
-                    { cell.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(237, 241, 244)); cell.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(75, 87, 96)); }
+                    { cell.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(222, 229, 235)); cell.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(75, 87, 96)); }
                     else
-                    { cell.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 235, 210)); cell.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(150, 83, 12)); }
+                    { cell.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 216, 168)); cell.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(150, 83, 12)); }
                 }
             }
         }
@@ -1214,9 +1247,9 @@ namespace PatientAppointmentManager
         {
             AppointmentsGrid.AutoGenerateColumns = false;
             AppointmentsGrid.Columns.Clear();
-            AppointmentsGrid.FontSize = 13.5;
-            AppointmentsGrid.RowHeight = 38;
-            AppointmentsGrid.ColumnHeaderHeight = 38;
+            AppointmentsGrid.FontSize = 15.5;
+            AppointmentsGrid.RowHeight = 42;
+            AppointmentsGrid.ColumnHeaderHeight = 44;
             AppointmentsGrid.GridLinesVisibility = DataGridGridLinesVisibility.Horizontal;
             AppointmentsGrid.HorizontalGridLinesBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(225, 233, 236));
             AppointmentsGrid.VerticalGridLinesBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(238, 242, 244));
@@ -1240,14 +1273,32 @@ namespace PatientAppointmentManager
                 else if (name == "Trạng thái") width = 105;
                 else if (name == "Ngày tạo lịch") width = 155;
 
+                bool leftAligned = name == "Mã BN" || name == "Tên bệnh nhân" || name == "Khoa phòng" || name == "Dịch vụ";
+                var alignment = leftAligned ? TextAlignment.Left : TextAlignment.Center;
+
                 var textStyle = new Style(typeof(TextBlock));
-                textStyle.Setters.Add(new Setter(TextBlock.FontSizeProperty, 13.5));
+                textStyle.Setters.Add(new Setter(TextBlock.FontSizeProperty, 15.5));
                 textStyle.Setters.Add(new Setter(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center));
+                textStyle.Setters.Add(new Setter(TextBlock.HorizontalAlignmentProperty, HorizontalAlignment.Stretch));
                 textStyle.Setters.Add(new Setter(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis));
-                textStyle.Setters.Add(new Setter(TextBlock.MarginProperty, new Thickness(5, 0, 5, 0)));
-                textStyle.Setters.Add(new Setter(TextBlock.TextAlignmentProperty,
-                    name == "Tên bệnh nhân" || name == "Khoa phòng" || name == "Dịch vụ" ? TextAlignment.Left : TextAlignment.Center));
-                var column = new DataGridTextColumn { Header = name, Binding = new System.Windows.Data.Binding { Path = new PropertyPath("[" + name + "]") }, Width = new DataGridLength(width), ElementStyle = textStyle };
+                textStyle.Setters.Add(new Setter(TextBlock.MarginProperty, new Thickness(7, 0, 7, 0)));
+                textStyle.Setters.Add(new Setter(TextBlock.TextAlignmentProperty, alignment));
+
+                var headerStyle = new Style(typeof(DataGridColumnHeader));
+                headerStyle.Setters.Add(new Setter(Control.HorizontalContentAlignmentProperty,
+                    leftAligned ? HorizontalAlignment.Left : HorizontalAlignment.Center));
+                headerStyle.Setters.Add(new Setter(Control.VerticalContentAlignmentProperty, VerticalAlignment.Center));
+                headerStyle.Setters.Add(new Setter(Control.FontSizeProperty, 14.5));
+                headerStyle.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(7, 8, 7, 8)));
+
+                var column = new DataGridTextColumn
+                {
+                    Header = name,
+                    Binding = new System.Windows.Data.Binding { Path = new PropertyPath("[" + name + "]") },
+                    Width = new DataGridLength(width),
+                    ElementStyle = textStyle,
+                    HeaderStyle = headerStyle
+                };
                 AppointmentsGrid.Columns.Add(column);
             }
         }
