@@ -40,3 +40,10 @@ Lưu ý: bộ quét hiện đọc bảng HTML đang hiển thị trong trang hi�
 - Sửa kiểm tra số dòng quét dùng ArrayList.Count.
 
 Lưu ý kiểm thử: phân loại Có tiêm/Không tiêm hiện dựa trên từ khóa trong tên dịch vụ. Nếu tên dịch vụ không thể hiện rõ, ứng dụng yêu cầu kiểm tra thay vì tự đoán. Cần kiểm thử trên website thực tế và build GitHub Actions trước khi dùng chính thức.
+
+
+## v0.5.2 - Fix build reference
+
+- Thêm tham chiếu tường minh `System.Web` bên cạnh `System.Web.Extensions` để WPF MarkupCompilePass1/MSBuild resolve được assembly phụ thuộc.
+- Giữ nguyên .NET Framework 4.8 và CefSharp 109.1.110 để không làm mất mục tiêu Windows 7.
+- Cảnh báo NU1903 của CefSharp vẫn cần được đánh giá riêng; không nâng phiên bản tự động vì có thể mất tương thích Windows 7.
