@@ -1,4 +1,4 @@
-
+﻿
 using System;
 using System.Data;
 using System.Data.SQLite;
@@ -365,8 +365,8 @@ SELECT
     ExamCode AS 'Mã chỉ định',
     ServiceName AS 'Dịch vụ',
     InjectionStatus AS 'Tiêm thuốc cản quang',
-    strftime('%d/%m/%y', AppointmentDate) AS 'Ngày hẹn',
-    strftime('%d/%m/%y %H:%M', CreatedAt) AS 'Ngày tạo lịch',
+    strftime('%d/%m/%Y', AppointmentDate) AS 'Ngày hẹn',
+    strftime('%d/%m/%Y %H:%M', datetime(CreatedAt)) AS 'Ngày tạo lịch',
     TRIM(Shift) AS 'Buổi',
     CASE WHEN Status = 'Đã trả lịch' THEN 'Đã trả hẹn' ELSE Status END AS 'Trạng thái'
 FROM Appointments

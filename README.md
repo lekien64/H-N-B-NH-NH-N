@@ -74,3 +74,11 @@ Lưu ý kiểm thử: phân loại Có tiêm/Không tiêm hiện dựa trên t�
 - Mở rộng cột Dịch vụ và thêm tooltip chứa toàn bộ tên dịch vụ khi rê chuột.
 - Cửa sổ tạo lịch chỉ yêu cầu người dùng chọn Ngày hẹn và Buổi hẹn; các trường bệnh nhân, mã BN, số phiếu, khoa/phòng, dịch vụ và trạng thái tiêm vẫn tự lấy từ dữ liệu quét.
 - Giữ kiểm tra trùng lần cuối trước khi ghi SQLite.
+
+
+## v0.5.6 - Sửa ngày hiển thị, phân loại tiêm và bố cục nút tạo lịch
+
+- Đổi định dạng SQLite `strftime` từ `%y` sang `%Y` để tương thích phiên bản SQLite cũ đi kèm ứng dụng; ngày hẹn và ngày tạo lịch không còn trả về NULL do mã định dạng không hỗ trợ.
+- Chuẩn hóa dấu tiếng Việt trước khi phân loại Có tiêm/Không tiêm; ưu tiên cụm phủ định trước cụm khẳng định, không dùng riêng từ chung `cản quang` để kết luận Có tiêm.
+- Tăng chiều cao tự động cửa sổ tạo lịch, cho phép co giãn và căn giữa nội dung nút Tạo lịch hẹn/Hủy để không bị cắt.
+- Trường hợp dịch vụ vẫn không đủ dữ liệu để kết luận vẫn giữ trạng thái Chưa xác định, không tự đoán.
