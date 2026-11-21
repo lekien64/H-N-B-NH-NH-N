@@ -3,6 +3,8 @@ using System.Data;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using System.Linq;
+using System.Web.Script.Serialization;
 using System.Security.Cryptography;
 using System.Windows;
 using System.Windows.Controls;
@@ -366,6 +368,207 @@ namespace PatientAppointmentManager
         private void AddReload_Click(object sender, RoutedEventArgs e)
         {
             AddHospitalBrowser.Reload();
+        }
+
+        private sealed class HospitalScanRow
+        {
+            public string ReceiptCode { get; set; }
+            public string ExamCode { get { return ReceiptCode; } }
+            public string PatientCode { get; set; }
+            public string PatientName { get; set; }
+            public string Age { get; set; }
+            public string InjectionStatus { get; set; }
+            public string Department { get; set; }
+            public string OrderedAt { get; set; }
+            public string ServiceName { get; set; }
+            public string Room { get; set; }
+            public string Status { get; set; }
+            public long ExistingAppointmentId { get; set; }
+            public string ExistingAppointmentDate { get; set; }
+            public string ExistingShift { get; set; }
+        }
+
+        private const string HospitalScanScript = @"
+(function () {
+  function clean(v) { return (v || '').replace(/\s+/g, ' ').trim(); }
+  function visible(el) {
+    if (!el) return false;
+    var s = window.getComputedStyle(el);
+    return s.display !== 'none' && s.visibility !== 'hidden' && el.getClientRects().length > 0;
+  }
+  var tables = Array.prototype.slice.call(document.querySelectorAll('table')).filter(visible);
+  var chosen = null, chosenHeaders = [], chosenScore = -1;
+  tables.forEach(function(t) {
+    var hs = Array.prototype.slice.call(t.querySelectorAll('thead th')).map(function(x){return clean(x.innerText || x.textContent);});
+    var joined = hs.join('|').toLowerCase();
+    var score = (joined.indexOf('số phiếu') >= 0 || joined.indexOf('so phieu') >= 0 ? 4 : 0)
+      + (joined.indexOf('mã bn') >= 0 || joined.indexOf('ma bn') >= 0 ? 3 : 0)
+      + (joined.indexOf('tên bệnh nhân') >= 0 || joined.indexOf('ten benh nhan') >= 0 ? 2 : 0)
+      + (joined.indexOf('thời gian chỉ định') >= 0 || joined.indexOf('thoi gian chi dinh') >= 0 ? 1 : 0);
+    if (score > chosenScore) { chosen=t; chosenHeaders=hs; chosenScore=score; }
+  });
+  if (!chosen || chosenScore < 5) return JSON.stringify({error:'Không tìm thấy bảng chỉ định có các cột Số phiếu và Mã BN. Hãy mở đúng trang danh sách chỉ định.'});
+  function indexOfHeader(keys) {
+    for (var i=0;i<chosenHeaders.length;i++) {
+      var h=clean(chosenHeaders[i]).toLowerCase();
+      for (var k=0;k<keys.length;k++) if (h===keys[k]) return i;
+    }
+    return -1;
+  }
+  var ix = {
+    receipt:indexOfHeader(['số phiếu','so phieu']),
+    patient:indexOfHeader(['mã bn','ma bn']),
+    name:indexOfHeader(['tên bệnh nhân','ten benh nhan']),
+    age:indexOfHeader(['tuổi','tuoi']),
+    dept:indexOfHeader(['khoa/phòng chỉ định','khoa/phong chi dinh']),
+    time:indexOfHeader(['thời gian chỉ định','thoi gian chi dinh']),
+    service:indexOfHeader(['tên dịch vụ','ten dich vu']),
+    room:indexOfHeader(['phòng','phong'])
+  };
+  function cell(row, idx) { var c=idx>=0 ? row.cells[idx] : null; return c ? clean(c.innerText || c.textContent) : ''; }
+  var rows = Array.prototype.slice.call(chosen.querySelectorAll('tbody tr'));
+  if (!rows.length) rows = Array.prototype.slice.call(chosen.querySelectorAll('tr')).slice(1);
+  var data=[];
+  rows.forEach(function(r) {
+    var o={receiptCode:cell(r,ix.receipt),patientCode:cell(r,ix.patient),patientName:cell(r,ix.name),age:cell(r,ix.age),department:cell(r,ix.dept),orderedAt:cell(r,ix.time),serviceName:cell(r,ix.service),room:cell(r,ix.room)};
+    if (o.receiptCode || o.patientCode) data.push(o);
+  });
+  return JSON.stringify({headers:chosenHeaders,rowCount:data.length,rows:data});
+})()";
+
+        private async void ScanHospitalList_Click(object sender, RoutedEventArgs e)
+        {
+            if (AddHospitalBrowser == null || !AddHospitalBrowser.IsBrowserInitialized)
+            {
+                MessageBox.Show("Trình duyệt bệnh viện chưa sẵn sàng.", "Quét danh sách");
+                return;
+            }
+            try
+            {
+                var frame = AddHospitalBrowser.GetMainFrame();
+                if (frame == null || !frame.IsValid) { MessageBox.Show("Không đọc được trang hiện tại."); return; }
+                var response = await frame.EvaluateScriptAsync(HospitalScanScript);
+                if (!response.Success || response.Result == null)
+                {
+                    MessageBox.Show("Không thể đọc dữ liệu trang: " + response.Message, "Quét danh sách");
+                    return;
+                }
+                var serializer = new JavaScriptSerializer();
+                var payload = serializer.Deserialize<Dictionary<string, object>>(Convert.ToString(response.Result));
+                if (payload.ContainsKey("error")) { MessageBox.Show(Convert.ToString(payload["error"]), "Quét danh sách"); return; }
+                var rows = payload.ContainsKey("rows") ? payload["rows"] as System.Collections.ArrayList : null;
+                if (rows == null || rows.Count == 0) { MessageBox.Show("Bảng tìm thấy nhưng không có dòng dữ liệu. Hãy chuyển sang trang có danh sách bệnh nhân.", "Quét danh sách"); return; }
+                var results = new List<HospitalScanRow>();
+                foreach (var item in rows)
+                {
+                    var d = item as Dictionary<string, object>; if (d == null) continue;
+                    string receipt = GetScanValue(d, "receiptCode");
+                    string patient = GetScanValue(d, "patientCode");
+                    if (string.IsNullOrWhiteSpace(receipt) || string.IsNullOrWhiteSpace(patient)) continue;
+                    var match = Database.FindActiveAppointment(patient, receipt);
+                    var r = new HospitalScanRow { ReceiptCode=receipt, PatientCode=patient,
+                        PatientName=GetScanValue(d,"patientName"), Age=GetScanValue(d,"age"), Department=GetScanValue(d,"department"),
+                        InjectionStatus=DetectInjectionStatus(GetScanValue(d,"serviceName")), OrderedAt=GetScanValue(d,"orderedAt"), ServiceName=GetScanValue(d,"serviceName"), Room=GetScanValue(d,"room") };
+                    if (match != null) { r.Status="ĐÃ CÓ LỊCH"; r.ExistingAppointmentId=match.Id; r.ExistingAppointmentDate=match.AppointmentDate.ToString("dd/MM/yyyy"); r.ExistingShift=match.Shift; }
+                    else r.Status="CHƯA CÓ LỊCH";
+                    results.Add(r);
+                }
+                ShowHospitalScanResults(results);
+            }
+            catch (Exception ex) { MessageBox.Show("Lỗi khi quét danh sách bệnh nhân.\n\n" + ex.Message, "Quét danh sách", MessageBoxButton.OK, MessageBoxImage.Error); }
+        }
+
+        private static string GetScanValue(Dictionary<string, object> data, string key)
+        {
+            object value; return data.TryGetValue(key, out value) && value != null ? Convert.ToString(value).Trim() : "";
+        }
+
+        private void ShowHospitalScanResults(List<HospitalScanRow> rows)
+        {
+            var window = new Window { Title="Kết quả quét chỉ định", Width=1050, Height=620, MinWidth=780, MinHeight=420,
+                Owner=this, WindowStartupLocation=WindowStartupLocation.CenterOwner, Background=System.Windows.Media.Brushes.White };
+            var root = new DockPanel { Margin=new Thickness(12) };
+            var summary = new TextBlock { Text="Đã quét " + rows.Count + " dòng. Đối chiếu theo Mã BN + Số phiếu (Số phiếu được dùng làm Mã chỉ định). Lịch trùng được đánh dấu để bạn xử lý thủ công.",
+                TextWrapping=TextWrapping.Wrap, Margin=new Thickness(0,0,0,10), Foreground=System.Windows.Media.Brushes.DarkSlateGray };
+            DockPanel.SetDock(summary,Dock.Top); root.Children.Add(summary);
+            var grid = new DataGrid { ItemsSource=rows, AutoGenerateColumns=false, IsReadOnly=true, SelectionMode=DataGridSelectionMode.Single,
+                CanUserAddRows=false, CanUserDeleteRows=false, HeadersVisibility=DataGridHeadersVisibility.Column };
+            grid.Columns.Add(new DataGridTextColumn { Header="Kết quả", Binding=new System.Windows.Data.Binding("Status"), Width=105 });
+            grid.Columns.Add(new DataGridTextColumn { Header="Số phiếu / Mã chỉ định", Binding=new System.Windows.Data.Binding("ReceiptCode"), Width=145 });
+            grid.Columns.Add(new DataGridTextColumn { Header="Tuổi", Binding=new System.Windows.Data.Binding("Age"), Width=55 });
+            grid.Columns.Add(new DataGridTextColumn { Header="Tiêm cản quang", Binding=new System.Windows.Data.Binding("InjectionStatus"), Width=100 });
+            grid.Columns.Add(new DataGridTextColumn { Header="Mã BN", Binding=new System.Windows.Data.Binding("PatientCode"), Width=100 });
+            grid.Columns.Add(new DataGridTextColumn { Header="Tên bệnh nhân", Binding=new System.Windows.Data.Binding("PatientName"), Width=160 });
+            grid.Columns.Add(new DataGridTextColumn { Header="Khoa/phòng", Binding=new System.Windows.Data.Binding("Department"), Width=145 });
+            grid.Columns.Add(new DataGridTextColumn { Header="Thời gian chỉ định", Binding=new System.Windows.Data.Binding("OrderedAt"), Width=140 });
+            grid.Columns.Add(new DataGridTextColumn { Header="Dịch vụ", Binding=new System.Windows.Data.Binding("ServiceName"), Width=150 });
+            grid.Columns.Add(new DataGridTextColumn { Header="Lịch đã lưu", Binding=new System.Windows.Data.Binding("ExistingAppointmentDate"), Width=95 });
+            grid.Columns.Add(new DataGridTextColumn { Header="Buổi", Binding=new System.Windows.Data.Binding("ExistingShift"), Width=65 });
+            root.Children.Add(grid);
+            var buttons = new StackPanel { Orientation=Orientation.Horizontal, HorizontalAlignment=HorizontalAlignment.Right, Margin=new Thickness(0,10,0,0) };
+            var returnButton = new Button { Content="Trả hẹn lịch cũ", Width=135, Height=34, Margin=new Thickness(0,0,8,0) };
+            returnButton.Click += (s,e) => {
+                var selected=grid.SelectedItem as HospitalScanRow;
+                if (selected==null || selected.ExistingAppointmentId<=0) { MessageBox.Show(window,"Chọn một dòng ĐÃ CÓ LỊCH trước."); return; }
+                if (MessageBox.Show(window,"Xác nhận trả lịch cũ của bệnh nhân " + selected.PatientName + "? Dữ liệu sẽ được giữ lại, không bị xóa.","Xác nhận trả hẹn",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes) return;
+                try { Database.Return(selected.ExistingAppointmentId); selected.Status="ĐÃ TRẢ HẸN"; selected.ExistingAppointmentId=0; grid.Items.Refresh(); LoadAppointments(); MessageBox.Show(window,"Đã đánh dấu trả hẹn lịch cũ."); }
+                catch(Exception ex) { MessageBox.Show(window,"Không thể trả hẹn: " + ex.Message); }
+            };
+            var createButton = new Button { Content="Tạo lịch hẹn", Width=110, Height=34, Margin=new Thickness(0,0,8,0) };
+            createButton.Click += (s,e) => {
+                var selected=grid.SelectedItem as HospitalScanRow;
+                if(selected==null){MessageBox.Show(window,"Hãy chọn một bệnh nhân.");return;}
+                if(selected.ExistingAppointmentId>0){MessageBox.Show(window,"Bệnh nhân đã có lịch còn hẹn. Hãy chọn Trả hẹn hoặc Giữ lịch.");return;}
+                if (CreateAppointmentFromScan(selected, window)) { selected.Status="ĐÃ TẠO LỊCH"; grid.Items.Refresh(); LoadAppointments(); }
+            };
+            var keepButton = new Button { Content="Giữ lịch", Width=95, Height=34, Margin=new Thickness(0,0,8,0) };
+            keepButton.Click += (s,e) => { var selected=grid.SelectedItem as HospitalScanRow; if(selected==null){MessageBox.Show(window,"Chọn một dòng trước.");return;} if(selected.ExistingAppointmentId<=0){MessageBox.Show(window,"Dòng này chưa có lịch. Dùng nút Tạo lịch hẹn.");return;} window.Close(); };
+            var closeButton = new Button { Content="Hủy / Đóng", Width=95, Height=34 }; closeButton.Click += (s,e)=>window.Close();
+            buttons.Children.Add(returnButton); buttons.Children.Add(keepButton); buttons.Children.Add(createButton); buttons.Children.Add(closeButton);
+            DockPanel.SetDock(buttons,Dock.Bottom); root.Children.Add(buttons); window.Content=root; window.ShowDialog();
+        }
+
+        private static string DetectInjectionStatus(string serviceName)
+        {
+            string value = (serviceName ?? "").ToLowerInvariant();
+            string[] noTerms = { "không tiêm", "khong tiem", "không dùng thuốc cản quang", "khong dung thuoc can quang", "không sử dụng thuốc cản quang", "khong su dung thuoc can quang" };
+            foreach (string term in noTerms) if (value.Contains(term)) return "Không tiêm";
+            string[] yesTerms = { "có tiêm", "co tiem", "tiêm thuốc cản quang", "tiem thuoc can quang", "cản quang", "can quang" };
+            foreach (string term in yesTerms) if (value.Contains(term)) return "Có tiêm";
+            return "Chưa xác định";
+        }
+
+        private bool CreateAppointmentFromScan(HospitalScanRow row, Window owner)
+        {
+            if (string.IsNullOrWhiteSpace(row.PatientCode) || string.IsNullOrWhiteSpace(row.ReceiptCode) || string.IsNullOrWhiteSpace(row.PatientName))
+            { MessageBox.Show(owner, "Thiếu mã BN, số phiếu hoặc tên bệnh nhân. Không thể tạo lịch."); return false; }
+            if (row.InjectionStatus == "Chưa xác định")
+            { MessageBox.Show(owner, "Không xác định được Có tiêm/Không tiêm từ tên dịch vụ. Vui lòng kiểm tra chỉ định trên website trước khi tạo lịch.", "Cần xác nhận dữ liệu", MessageBoxButton.OK, MessageBoxImage.Warning); return false; }
+
+            var dialog = new Window { Title="Tạo lịch hẹn mới", Width=430, Height=330, ResizeMode=ResizeMode.NoResize, Owner=owner, WindowStartupLocation=WindowStartupLocation.CenterOwner, Background=System.Windows.Media.Brushes.White };
+            var panel = new StackPanel { Margin=new Thickness(18) };
+            panel.Children.Add(new TextBlock { Text=row.PatientName + "  |  " + row.PatientCode, FontSize=16, FontWeight=FontWeights.Bold, TextWrapping=TextWrapping.Wrap, Margin=new Thickness(0,0,0,6) });
+            panel.Children.Add(new TextBlock { Text="Số phiếu: " + row.ReceiptCode + "     Dịch vụ: " + row.ServiceName, TextWrapping=TextWrapping.Wrap, Margin=new Thickness(0,0,0,12) });
+            panel.Children.Add(new TextBlock { Text="Ngày hẹn", Margin=new Thickness(0,0,0,4) });
+            var date = new DatePicker { SelectedDate=DateTime.Today.AddDays(1), Height=32, Margin=new Thickness(0,0,0,12) }; panel.Children.Add(date);
+            panel.Children.Add(new TextBlock { Text="Buổi hẹn", Margin=new Thickness(0,0,0,4) });
+            var shift = new ComboBox { Height=32, SelectedIndex=0, Margin=new Thickness(0,0,0,14) };
+            shift.Items.Add("Sáng"); shift.Items.Add("Chiều"); panel.Children.Add(shift);
+            panel.Children.Add(new TextBlock { Text="Tiêm thuốc cản quang: " + row.InjectionStatus, FontWeight=FontWeights.SemiBold, Margin=new Thickness(0,0,0,14) });
+            var actions = new StackPanel { Orientation=Orientation.Horizontal, HorizontalAlignment=HorizontalAlignment.Right };
+            var save = new Button { Content="Tạo lịch hẹn", Width=110, Height=34, IsDefault=true, Margin=new Thickness(0,0,8,0) };
+            var cancel = new Button { Content="Hủy", Width=80, Height=34, IsCancel=true };
+            bool saved=false;
+            save.Click += (s,e) => {
+                if(date.SelectedDate==null){MessageBox.Show(dialog,"Hãy chọn ngày hẹn.");return;}
+                try {
+                    if(Database.FindActiveAppointment(row.PatientCode,row.ReceiptCode)!=null){MessageBox.Show(dialog,"Lịch này vừa được tạo ở nơi khác hoặc đã tồn tại. Không tạo trùng.");return;}
+                    Database.Add(new Appointment { PatientCode=row.PatientCode, PatientName=row.PatientName, Department=row.Department, ExamCode=row.ReceiptCode, ServiceName=row.ServiceName, InjectionStatus=row.InjectionStatus, AppointmentDate=date.SelectedDate.Value.Date, Shift=Convert.ToString(shift.SelectedItem), Status="Đã hẹn", CreatedAt=DateTime.Now });
+                    saved=true; dialog.DialogResult=true; dialog.Close();
+                } catch(Exception ex){MessageBox.Show(dialog,"Không thể tạo lịch: " + ex.Message);}
+            };
+            actions.Children.Add(save); actions.Children.Add(cancel); panel.Children.Add(actions); dialog.Content=panel;
+            if(dialog.ShowDialog()==true && saved){MessageBox.Show(owner,"Đã tạo lịch hẹn cho " + row.PatientName + ".");return true;} return false;
         }
 
         // Chỉ đọc cấu trúc bảng/cột, không đọc nội dung từng bệnh nhân.

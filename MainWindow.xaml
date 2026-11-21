@@ -122,6 +122,7 @@
 
      <DockPanel Grid.Row="0" Height="40" Margin="0,0,0,8" LastChildFill="True" VerticalAlignment="Center">
       <Button Content="Mở" Width="52" Height="32" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" VerticalAlignment="Center" DockPanel.Dock="Right" Click="AddOpenUrl_Click"/>
+      <Button Content="Quét DS" ToolTip="Quét và đối chiếu danh sách chỉ định với lịch đã lưu" Width="72" Height="32" Padding="3,0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Margin="0,0,5,0" DockPanel.Dock="Right" Click="ScanHospitalList_Click"/>
       <Button Content="DOM" ToolTip="Kiểm tra cấu trúc trang" Width="48" Height="32" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" Margin="0,0,5,0" DockPanel.Dock="Right" Click="InspectAddDom_Click"/>
      <Button Width="36" Height="34" Padding="0" Margin="0,0,5,0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" DockPanel.Dock="Right" ToolTip="Vừa màn hình" Click="AddBrowserFit_Click">
       <TextBlock Text="⛶" FontSize="23" FontWeight="Normal" VerticalAlignment="Center" HorizontalAlignment="Center" LineHeight="24"/>

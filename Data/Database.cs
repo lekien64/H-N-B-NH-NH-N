@@ -231,6 +231,39 @@ AND (@e = '' OR ExamCode = @e)";
             }
         }
 
+        public static Appointment FindActiveAppointment(string patientCode, string receiptCode)
+        {
+            using (var c = new SQLiteConnection(ConnectionString))
+            {
+                c.Open();
+                using (var cmd = c.CreateCommand())
+                {
+                    cmd.CommandText = @"SELECT Id, PatientCode, PatientName, Department, ExamCode, ServiceName, InjectionStatus, AppointmentDate, Shift, Status, CreatedAt
+FROM Appointments WHERE PatientCode=@p AND ExamCode=@e AND Status='Đã hẹn' ORDER BY Id DESC LIMIT 1";
+                    cmd.Parameters.AddWithValue("@p", patientCode ?? "");
+                    cmd.Parameters.AddWithValue("@e", receiptCode ?? "");
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (!reader.Read()) return null;
+                        return new Appointment
+                        {
+                            Id = Convert.ToInt64(reader["Id"]),
+                            PatientCode = Convert.ToString(reader["PatientCode"]),
+                            PatientName = Convert.ToString(reader["PatientName"]),
+                            Department = Convert.ToString(reader["Department"]),
+                            ExamCode = Convert.ToString(reader["ExamCode"]),
+                            ServiceName = Convert.ToString(reader["ServiceName"]),
+                            InjectionStatus = Convert.ToString(reader["InjectionStatus"]),
+                            AppointmentDate = DateTime.Parse(Convert.ToString(reader["AppointmentDate"])),
+                            Shift = Convert.ToString(reader["Shift"]),
+                            Status = Convert.ToString(reader["Status"]),
+                            CreatedAt = DateTime.Parse(Convert.ToString(reader["CreatedAt"]))
+                        };
+                    }
+                }
+            }
+        }
+
         public static void Add(Appointment a)
         {
             if (a == null)
@@ -333,6 +366,7 @@ SELECT
     ServiceName AS 'Dịch vụ',
     InjectionStatus AS 'Tiêm thuốc cản quang',
     strftime('%d/%m/%y', AppointmentDate) AS 'Ngày hẹn',
+    strftime('%d/%m/%y %H:%M', CreatedAt) AS 'Ngày tạo lịch',
     TRIM(Shift) AS 'Buổi',
     CASE WHEN Status = 'Đã trả lịch' THEN 'Đã trả hẹn' ELSE Status END AS 'Trạng thái'
 FROM Appointments

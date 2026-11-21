@@ -11,6 +11,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System.Security" />
+    <Reference Include="System.Web.Extensions" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="System.Data.SQLite.Core" Version="1.0.119" />
