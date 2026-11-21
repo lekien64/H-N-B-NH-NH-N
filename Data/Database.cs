@@ -264,6 +264,39 @@ FROM Appointments WHERE PatientCode=@p AND ExamCode=@e AND Status='Đã hẹn' O
             }
         }
 
+        public static Appointment FindLatestAppointment(string patientCode, string receiptCode)
+        {
+            using (var c = new SQLiteConnection(ConnectionString))
+            {
+                c.Open();
+                using (var cmd = c.CreateCommand())
+                {
+                    cmd.CommandText = @"SELECT Id, PatientCode, PatientName, Department, ExamCode, ServiceName, InjectionStatus, AppointmentDate, Shift, Status, CreatedAt
+FROM Appointments WHERE PatientCode=@p AND ExamCode=@e ORDER BY Id DESC LIMIT 1";
+                    cmd.Parameters.AddWithValue("@p", patientCode ?? "");
+                    cmd.Parameters.AddWithValue("@e", receiptCode ?? "");
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (!reader.Read()) return null;
+                        return new Appointment
+                        {
+                            Id = Convert.ToInt64(reader["Id"]),
+                            PatientCode = Convert.ToString(reader["PatientCode"]),
+                            PatientName = Convert.ToString(reader["PatientName"]),
+                            Department = Convert.ToString(reader["Department"]),
+                            ExamCode = Convert.ToString(reader["ExamCode"]),
+                            ServiceName = Convert.ToString(reader["ServiceName"]),
+                            InjectionStatus = Convert.ToString(reader["InjectionStatus"]),
+                            AppointmentDate = DateTime.Parse(Convert.ToString(reader["AppointmentDate"])),
+                            Shift = Convert.ToString(reader["Shift"]),
+                            Status = Convert.ToString(reader["Status"]),
+                            CreatedAt = DateTime.Parse(Convert.ToString(reader["CreatedAt"]))
+                        };
+                    }
+                }
+            }
+        }
+
         public static void Add(Appointment a)
         {
             if (a == null)

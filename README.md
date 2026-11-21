@@ -116,3 +116,6 @@ Build status: source package and static XML/JavaScript syntax checks only. A Win
 - Preserves the v0.5.8 service extraction and appointment data logic.
 
 Validation: XAML and project XML are well-formed. This environment does not have MSBuild/.NET Framework build tools, so a Windows build and live click-to-open test are still required.
+
+## v0.5.10
+See `HUONG_DAN_CAP_NHAT_v0510.txt` for the compact appointment filters, date stepper buttons, history click fix, cell color borders, low-resolution grid sizing, and automatic duplicate-pair detection.

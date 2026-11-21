@@ -1,0 +1,28 @@
+SO HEN CT v0.5.10 - HUONG DAN CAP NHAT
+
+1. Sao luu ma nguon hien tai. Khong xoa, di chuyen hoac ghi de file SQLite dang dung tren may.
+2. Giai nen goi ZIP v0.5.10.
+3. Dua noi dung thu muc SoHenCT_v051_build len nhanh feature/v0.2-cefsharp-browser, thay the ma nguon cu.
+4. Chay GitHub Actions workflow build-windows.yml.
+5. Chi cai thu tren may Windows 11/Windows 7 sau khi Actions build thanh cong. Chua cap nhat nhanh main.
+
+THAY DOI v0.5.10
+- Khoi phuc co chu bang Lich da hen ve muc v0.5.8: 13.5 px; dong 34 px; tieu de cot gon hon.
+- Giam kich thuoc toi thieu cac cot, uu tien tu dong chia khong gian cho Ten benh nhan, Khoa phong va Dich vu de han che cuon ngang tren man hinh nho.
+- Bo loc gom 4 thanh phan tren mot hang: Tu ngay, Den ngay, Buoi, Tiem thuoc can quang.
+- Them nut -/+ ngay canh tung o ngay. Thay doi ngay se tu cap nhat danh sach; neu hai moc ngay vuot nhau, moc con lai duoc dieu chinh de giu khoang ngay hop le.
+- To mau nen va vien tung o cua cot Buoi va Tiem thuoc can quang.
+- Sua su kien click muc lich su sang PreviewMouseLeftButtonUp de uu tien bat click chuot truoc khi ComboBox xu ly dong danh sach.
+- Them co che tu dong kiem tra dinh ky cac bang HTML tren ca trinh duyet va trang Them lich. Bo nhan dien tim cot Ma BN va So phieu/Ma chi dinh, sau do doi chieu cap ma voi SQLite. Neu trung, hien hop thoai ngay; lich dang hen cho phep de nghi doi lich, lich da tra cho phep de nghi tao lich moi.
+- Co che tu dong chi nhan dien bang HTML co hang tieu de va cot Ma BN + So phieu/Ma chi dinh. Neu website dung cau truc khac (the div/card, header khong ro), can lay bao cao DOM thuc te de bo sung bo nhan dien.
+- Khong tu dong ghi/doi lich neu nguoi dung chua xac nhan.
+
+KIEM TRA TRUOC KHI GUI
+- Da kiem tra XAML la XML hop le.
+- Da kiem tra so ngoac trong MainWindow.xaml.cs can bang, da kiem tra cac ten handler duoc tham chieu trong XAML co trong code.
+- Da kiem tra ZIP va danh sach file.
+- Chua co MSBuild/dotnet compiler trong moi truong tao goi, do do chua xac nhan build thuc te.
+- Can thu nghiem tren website benh vien: (a) bang ket qua tim benh nhan, (b) bang danh sach chi dinh; xac nhan tieu de hai cot co dung la Ma BN va So phieu/Ma chi dinh.
+- Can thu click muc lich su tren ca hai o dia chi.
+- Can thu bo loc mot hang va nut tang/giam ngay tren man hinh do phan giai thap.
+- Khong xoa hoac thay the co so du lieu SQLite hien tai.

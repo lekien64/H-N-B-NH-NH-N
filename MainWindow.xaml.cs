@@ -10,6 +10,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Threading;
 using CefSharp;
 using CefSharp.Wpf;
 using PatientAppointmentManager.Data;
@@ -19,6 +20,10 @@ namespace PatientAppointmentManager
 {
     public partial class MainWindow : Window
     {
+        private readonly DispatcherTimer _autoDuplicateTimer = new DispatcherTimer();
+        private bool _autoDuplicateCheckRunning;
+        private readonly HashSet<string> _autoVisiblePairs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
         public MainWindow()
         {
             InitializeComponent();
@@ -43,6 +48,12 @@ namespace PatientAppointmentManager
                         SaveVisitedAddress(args.Url, AddUrlBox);
                     }));
             };
+
+            // Theo dõi nhẹ hai trình duyệt: tự đối chiếu cặp Mã BN + Số phiếu
+            // khi bảng kết quả tìm kiếm hoặc bảng chỉ định được tải/cập nhật.
+            _autoDuplicateTimer.Interval = TimeSpan.FromMilliseconds(1400);
+            _autoDuplicateTimer.Tick += AutoDuplicateTimer_Tick;
+            _autoDuplicateTimer.Start();
         }
 
         private void ShowView(string name)
@@ -204,6 +215,7 @@ namespace PatientAppointmentManager
             box.SelectedItem = address;
             box.Text = address;
             box.IsDropDownOpen = false;
+            box.Dispatcher.BeginInvoke(new Action(() => box.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next))), System.Windows.Threading.DispatcherPriority.Input);
 
             if (box == UrlBox)
             {
@@ -568,6 +580,134 @@ namespace PatientAppointmentManager
             acceptedRows: rows.length, cellCountExpected: 13}
   });
 })()";
+
+        private const string AutoDetectAppointmentPairsScript = @"
+(function(){
+ function clean(v){return (v||'').replace(/\s+/g,' ').trim();}
+ function norm(v){var x=clean(v).toLowerCase();try{x=x.normalize('NFD').replace(/[\u0300-\u036f]/g,'');}catch(e){}return x.replace(/đ/g,'d');}
+ function text(el){return clean(el?(el.innerText||el.textContent||''):'');}
+ var result=[], tables=Array.prototype.slice.call(document.querySelectorAll('table'));
+ tables.forEach(function(table){
+  var headerRow=table.querySelector('thead tr')||table.querySelector('tr');
+  if(!headerRow)return;
+  var hs=Array.prototype.slice.call(headerRow.querySelectorAll('th,td')).map(text);
+  var patientIndex=-1, receiptIndex=-1, nameIndex=-1, deptIndex=-1, serviceIndex=-1, ageIndex=-1;
+  hs.forEach(function(h,i){var n=norm(h);
+   if(patientIndex<0 && (n==='ma bn'||n.indexOf('ma benh nhan')>=0))patientIndex=i;
+   if(receiptIndex<0 && (n.indexOf('so phieu')>=0||n.indexOf('ma chi dinh')>=0))receiptIndex=i;
+   if(nameIndex<0 && (n.indexOf('ten benh nhan')>=0||n==='ho ten'))nameIndex=i;
+   if(deptIndex<0 && (n.indexOf('khoa')>=0||n.indexOf('phong')>=0))deptIndex=i;
+   if(serviceIndex<0 && (n.indexOf('dich vu')>=0||n.indexOf('ten chi dinh')>=0))serviceIndex=i;
+   if(ageIndex<0 && (n==='tuoi'||n.indexOf('tuoi')>=0))ageIndex=i;
+  });
+  if(patientIndex<0||receiptIndex<0)return;
+  var trs=Array.prototype.slice.call(table.querySelectorAll('tbody tr'));
+  if(!trs.length)trs=Array.prototype.slice.call(table.querySelectorAll('tr')).slice(1);
+  trs.forEach(function(tr){var cells=Array.prototype.slice.call(tr.querySelectorAll('td'));if(!cells.length)return;
+   function at(i){return i>=0&&i<cells.length?text(cells[i]):'';}
+   var patient=at(patientIndex),receipt=at(receiptIndex);
+   if(!patient||!receipt||patient.length<3||receipt.length<3)return;
+   if(!/[0-9]/.test(patient)||!/[0-9]/.test(receipt))return;
+   result.push({patientCode:patient,receiptCode:receipt,patientName:at(nameIndex),department:at(deptIndex),serviceName:at(serviceIndex),age:at(ageIndex)});
+  });
+ });
+ var unique={}, rows=[];result.forEach(function(r){var k=r.patientCode+'|'+r.receiptCode;if(!unique[k]){unique[k]=1;rows.push(r);}});
+ return JSON.stringify(rows);
+})()";
+
+        private async void AutoDuplicateTimer_Tick(object sender, EventArgs e)
+        {
+            if (_autoDuplicateCheckRunning || !IsLoaded) return;
+            _autoDuplicateCheckRunning = true;
+            try
+            {
+                var browsers = new List<ChromiumWebBrowser>();
+                if (AddHospitalBrowser != null) browsers.Add(AddHospitalBrowser);
+                foreach (TabItem tab in BrowserTabsControl.Items)
+                {
+                    var browser = tab.Content as ChromiumWebBrowser;
+                    if (browser != null && !browsers.Contains(browser)) browsers.Add(browser);
+                }
+
+                var currentlyVisible = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                bool noticeShown = false;
+                foreach (var browser in browsers)
+                {
+                    if (browser == null || !browser.IsBrowserInitialized) continue;
+                    var frame = browser.GetMainFrame();
+                    if (frame == null || !frame.IsValid) continue;
+                    var response = await frame.EvaluateScriptAsync(AutoDetectAppointmentPairsScript);
+                    if (!response.Success || response.Result == null) continue;
+                    var json = Convert.ToString(response.Result);
+                    var items = new JavaScriptSerializer().Deserialize<System.Collections.ArrayList>(json);
+                    if (items == null) continue;
+                    foreach (var item in items)
+                    {
+                        var d = item as Dictionary<string, object>;
+                        if (d == null) continue;
+                        string patient = GetScanValue(d, "patientCode");
+                        string receipt = GetScanValue(d, "receiptCode");
+                        if (string.IsNullOrWhiteSpace(patient) || string.IsNullOrWhiteSpace(receipt)) continue;
+                        string key = patient.Trim() + "|" + receipt.Trim();
+                        currentlyVisible.Add(key);
+                        if (_autoVisiblePairs.Contains(key)) continue;
+
+                        var saved = Database.FindLatestAppointment(patient, receipt);
+                        if (saved == null) continue;
+                        var row = new HospitalScanRow
+                        {
+                            PatientCode = patient,
+                            ReceiptCode = receipt,
+                            PatientName = GetScanValue(d, "patientName"),
+                            Department = GetScanValue(d, "department"),
+                            ServiceName = GetScanValue(d, "serviceName"),
+                            Age = GetScanValue(d, "age"),
+                            InjectionStatus = string.IsNullOrWhiteSpace(saved.InjectionStatus) ? "Chưa xác định" : saved.InjectionStatus,
+                            Status = saved.Status == "Đã hẹn" ? "ĐÃ CÓ LỊCH" : "ĐÃ TRẢ HẸN",
+                            ExistingAppointmentId = saved.Id,
+                            ExistingAppointmentDate = saved.AppointmentDate.ToString("dd/MM/yyyy"),
+                            ExistingShift = saved.Shift
+                        };
+                        if (string.IsNullOrWhiteSpace(row.PatientName)) row.PatientName = saved.PatientName;
+                        if (string.IsNullOrWhiteSpace(row.Department)) row.Department = saved.Department;
+                        if (string.IsNullOrWhiteSpace(row.ServiceName)) row.ServiceName = saved.ServiceName;
+                        _autoVisiblePairs.Add(key);
+                        ShowAutomaticDuplicateNotice(row, saved);
+                        noticeShown = true;
+                        // Mỗi lượt chỉ mở một hộp thoại, tránh chồng nhiều cảnh báo.
+                        break;
+                    }
+                    if (noticeShown) break;
+                }
+                // Khi cặp mã rời khỏi kết quả, lần xuất hiện tiếp theo được phép cảnh báo lại.
+                _autoVisiblePairs.RemoveWhere(k => !currentlyVisible.Contains(k));
+            }
+            catch { /* Tự phát hiện không được làm gián đoạn thao tác trên website. */ }
+            finally { _autoDuplicateCheckRunning = false; }
+        }
+
+        private void ShowAutomaticDuplicateNotice(HospitalScanRow row, Appointment saved)
+        {
+            bool active = saved.Status == "Đã hẹn";
+            string message = "Phần mềm phát hiện bệnh nhân đã có dữ liệu lịch hẹn trùng theo Mã BN + Số phiếu.\n\n" +
+                "Bệnh nhân: " + (row.PatientName ?? "") + "\n" +
+                "Mã BN: " + row.PatientCode + "\n" +
+                "Số phiếu / Mã chỉ định: " + row.ReceiptCode + "\n" +
+                "Ngày hẹn đã lưu: " + saved.AppointmentDate.ToString("dd/MM/yyyy") + "\n" +
+                "Buổi: " + saved.Shift + "\n\n" +
+                (active ? "Bạn có muốn đổi lịch hẹn này ngay không?" : "Lịch cũ đã trả hẹn. Bạn có muốn tạo lịch hẹn mới không?");
+            var answer = ShowAppMessage(message, "Tự động phát hiện trùng lịch",
+                MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (answer != MessageBoxResult.Yes) return;
+            if (active)
+            {
+                ChangeAppointmentFromScan(row, this);
+            }
+            else
+            {
+                CreateAppointmentFromScan(row, this);
+            }
+        }
 
         private async void ScanHospitalList_Click(object sender, RoutedEventArgs e)
         {
@@ -1087,9 +1227,11 @@ namespace PatientAppointmentManager
                 if (text != null)
                     text.TextDecorations = returned ? TextDecorations.Strikethrough : null;
                 cell.Background = System.Windows.Media.Brushes.Transparent;
+                cell.BorderThickness = new Thickness(0);
+                cell.BorderBrush = System.Windows.Media.Brushes.Transparent;
+                cell.Padding = new Thickness(3, 1, 3, 1);
                 cell.Foreground = returned ? System.Windows.Media.Brushes.Gray : System.Windows.Media.Brushes.DarkSlateGray;
                 string header = cell.Column == null ? "" : Convert.ToString(cell.Column.Header);
-                if (returned) continue;
                 if (header == "Buổi")
                 {
                     string shift = Convert.ToString(row["Buổi"]);
@@ -1099,16 +1241,21 @@ namespace PatientAppointmentManager
                     cell.Foreground = shift == "Sáng"
                         ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(125, 83, 0))
                         : new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(28, 83, 145));
+                    cell.BorderBrush = shift == "Sáng"
+                        ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(210, 155, 35))
+                        : new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(75, 135, 205));
+                    cell.BorderThickness = new Thickness(1);
                 }
                 else if (header == "Tiêm thuốc cản quang")
                 {
                     string injection = Convert.ToString(row["Tiêm thuốc cản quang"]);
                     if (injection == "Có tiêm")
-                    { cell.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(190, 235, 202)); cell.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(24, 112, 55)); }
+                    { cell.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(210, 242, 218)); cell.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(24, 112, 55)); cell.BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(75, 170, 105)); }
                     else if (injection == "Không tiêm")
-                    { cell.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(222, 229, 235)); cell.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(75, 87, 96)); }
+                    { cell.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(232, 237, 242)); cell.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(75, 87, 96)); cell.BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(145, 158, 170)); }
                     else
-                    { cell.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 216, 168)); cell.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(150, 83, 12)); }
+                    { cell.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 229, 199)); cell.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(150, 83, 12)); cell.BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 145, 65)); }
+                    cell.BorderThickness = new Thickness(1);
                 }
             }
         }
@@ -1248,9 +1395,10 @@ namespace PatientAppointmentManager
         {
             AppointmentsGrid.AutoGenerateColumns = false;
             AppointmentsGrid.Columns.Clear();
-            AppointmentsGrid.FontSize = 15.5;
-            AppointmentsGrid.RowHeight = 42;
-            AppointmentsGrid.ColumnHeaderHeight = 44;
+            // Khôi phục cỡ chữ gọn của v0.5.8 để phù hợp màn hình độ phân giải thấp.
+            AppointmentsGrid.FontSize = 13.5;
+            AppointmentsGrid.RowHeight = 34;
+            AppointmentsGrid.ColumnHeaderHeight = 36;
             AppointmentsGrid.GridLinesVisibility = DataGridGridLinesVisibility.Horizontal;
             AppointmentsGrid.HorizontalGridLinesBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(225, 233, 236));
             AppointmentsGrid.VerticalGridLinesBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(238, 242, 244));
@@ -1261,42 +1409,45 @@ namespace PatientAppointmentManager
             foreach (string name in order)
             {
                 if (!data.Columns.Contains(name)) continue;
-                double width = 110;
-                if (name == "Id") width = 55;
-                else if (name == "Mã BN") width = 125;
-                else if (name == "Tên bệnh nhân") width = 165;
-                else if (name == "Khoa phòng") width = 190;
-                else if (name == "Mã chỉ định") width = 115;
-                else if (name == "Dịch vụ") width = 280;
-                else if (name == "Tiêm thuốc cản quang") width = 145;
-                else if (name == "Ngày hẹn") width = 105;
-                else if (name == "Buổi") width = 85;
-                else if (name == "Trạng thái") width = 105;
-                else if (name == "Ngày tạo lịch") width = 155;
+                double width = 78;
+                if (name == "Id") width = 32;
+                else if (name == "Mã BN") width = 68;
+                else if (name == "Tên bệnh nhân") width = 70;
+                else if (name == "Khoa phòng") width = 65;
+                else if (name == "Mã chỉ định") width = 60;
+                else if (name == "Dịch vụ") width = 75;
+                else if (name == "Tiêm thuốc cản quang") width = 78;
+                else if (name == "Ngày hẹn") width = 68;
+                else if (name == "Buổi") width = 42;
+                else if (name == "Trạng thái") width = 60;
+                else if (name == "Ngày tạo lịch") width = 80;
 
                 bool leftAligned = name == "Mã BN" || name == "Tên bệnh nhân" || name == "Khoa phòng" || name == "Dịch vụ";
                 var alignment = leftAligned ? TextAlignment.Left : TextAlignment.Center;
 
                 var textStyle = new Style(typeof(TextBlock));
-                textStyle.Setters.Add(new Setter(TextBlock.FontSizeProperty, 15.5));
+                textStyle.Setters.Add(new Setter(TextBlock.FontSizeProperty, 13.5));
                 textStyle.Setters.Add(new Setter(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center));
                 textStyle.Setters.Add(new Setter(TextBlock.HorizontalAlignmentProperty, HorizontalAlignment.Stretch));
                 textStyle.Setters.Add(new Setter(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis));
-                textStyle.Setters.Add(new Setter(TextBlock.MarginProperty, new Thickness(7, 0, 7, 0)));
+                textStyle.Setters.Add(new Setter(TextBlock.MarginProperty, new Thickness(4, 0, 4, 0)));
                 textStyle.Setters.Add(new Setter(TextBlock.TextAlignmentProperty, alignment));
 
                 var headerStyle = new Style(typeof(DataGridColumnHeader));
                 headerStyle.Setters.Add(new Setter(Control.HorizontalContentAlignmentProperty,
                     leftAligned ? HorizontalAlignment.Left : HorizontalAlignment.Center));
                 headerStyle.Setters.Add(new Setter(Control.VerticalContentAlignmentProperty, VerticalAlignment.Center));
-                headerStyle.Setters.Add(new Setter(Control.FontSizeProperty, 14.5));
-                headerStyle.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(7, 8, 7, 8)));
+                headerStyle.Setters.Add(new Setter(Control.FontSizeProperty, 12.5));
+                headerStyle.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(3, 5, 3, 5)));
 
                 var column = new DataGridTextColumn
                 {
                     Header = name,
                     Binding = new System.Windows.Data.Binding { Path = new PropertyPath("[" + name + "]") },
-                    Width = new DataGridLength(width),
+                    Width = (name == "Tên bệnh nhân" || name == "Khoa phòng" || name == "Dịch vụ")
+                        ? new DataGridLength(1, DataGridLengthUnitType.Star)
+                        : new DataGridLength(width),
+                    MinWidth = width,
                     ElementStyle = textStyle,
                     HeaderStyle = headerStyle
                 };
@@ -1319,6 +1470,23 @@ namespace PatientAppointmentManager
         {
             LoadAppointments();
         }
+
+        private void AdjustFilterDate(DatePicker picker, int days, bool isFrom)
+        {
+            DateTime current = picker.SelectedDate ?? DateTime.Today;
+            DateTime next = current.AddDays(days);
+            if (isFrom && ToDatePicker.SelectedDate.HasValue && next.Date > ToDatePicker.SelectedDate.Value.Date)
+                ToDatePicker.SelectedDate = next.Date;
+            if (!isFrom && FromDatePicker.SelectedDate.HasValue && next.Date < FromDatePicker.SelectedDate.Value.Date)
+                FromDatePicker.SelectedDate = next.Date;
+            picker.SelectedDate = next.Date;
+            LoadAppointments();
+        }
+
+        private void FromDateMinus_Click(object sender, RoutedEventArgs e) { AdjustFilterDate(FromDatePicker, -1, true); }
+        private void FromDatePlus_Click(object sender, RoutedEventArgs e) { AdjustFilterDate(FromDatePicker, 1, true); }
+        private void ToDateMinus_Click(object sender, RoutedEventArgs e) { AdjustFilterDate(ToDatePicker, -1, false); }
+        private void ToDatePlus_Click(object sender, RoutedEventArgs e) { AdjustFilterDate(ToDatePicker, 1, false); }
 
         private void FilterSelection_Changed(
             object sender,

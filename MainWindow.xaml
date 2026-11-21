@@ -6,7 +6,7 @@
  Height="800"
  Width="1300"
  MinHeight="680"
- MinWidth="1050"
+ MinWidth="850"
  WindowStartupLocation="CenterScreen"
  Background="#EAF3F4" Language="vi-VN">
 
@@ -85,7 +85,7 @@
                KeyDown="UrlBox_KeyDown" GotKeyboardFocus="UrlBox_GotKeyboardFocus" Height="34" VerticalAlignment="Center" Padding="8" VerticalContentAlignment="Center">
       <ComboBox.ItemContainerStyle>
        <Style TargetType="ComboBoxItem">
-        <EventSetter Event="MouseLeftButtonUp" Handler="HistoryItem_MouseLeftButtonUp"/>
+        <EventSetter Event="PreviewMouseLeftButtonUp" Handler="HistoryItem_MouseLeftButtonUp"/>
        </Style>
       </ComboBox.ItemContainerStyle>
      </ComboBox>
@@ -149,7 +149,7 @@
                 KeyDown="AddUrlBox_KeyDown" GotKeyboardFocus="AddUrlBox_GotKeyboardFocus" Height="32" VerticalAlignment="Center" Padding="7" VerticalContentAlignment="Center">
        <ComboBox.ItemContainerStyle>
         <Style TargetType="ComboBoxItem">
-         <EventSetter Event="MouseLeftButtonUp" Handler="HistoryItem_MouseLeftButtonUp"/>
+         <EventSetter Event="PreviewMouseLeftButtonUp" Handler="HistoryItem_MouseLeftButtonUp"/>
         </Style>
        </ComboBox.ItemContainerStyle>
       </ComboBox>
@@ -273,57 +273,41 @@
             BorderBrush="#D7E8E9" BorderThickness="1"
             Padding="16"
             Margin="0,0,0,14">
-     <StackPanel>
-      <TextBlock Text="Bộ lọc"
-                 FontWeight="SemiBold"
-                 Margin="0,0,0,10"/>
-
-      <UniformGrid Columns="2">
-       <StackPanel Margin="0,0,12,10">
-        <TextBlock Text="Từ ngày"/>
-        <DatePicker x:Name="FromDatePicker" Language="vi-VN"
-                    Height="34"
-                    SelectedDateChanged="FilterSelection_Changed"/>
-       </StackPanel>
-
-       <StackPanel Margin="0,0,0,10">
-        <TextBlock Text="Đến ngày"/>
-        <DatePicker x:Name="ToDatePicker" Language="vi-VN"
-                    Height="34"
-                    SelectedDateChanged="FilterSelection_Changed"/>
-       </StackPanel>
-
-       <StackPanel Margin="0,0,12,10">
-        <TextBlock Text="Buổi"/>
-        <ComboBox x:Name="FilterShiftBox"
-                  Height="34"
-                  SelectionChanged="FilterSelection_Changed">
-         <ComboBoxItem Content="Cả ngày" IsSelected="True"/>
-         <ComboBoxItem Content="Sáng"/>
-         <ComboBoxItem Content="Chiều"/>
-        </ComboBox>
-       </StackPanel>
-
-       <StackPanel Margin="0,0,0,10">
-        <TextBlock Text="Tiêm thuốc cản quang"/>
-        <ComboBox x:Name="InjectionFilterBox"
-                  Height="34"
-                  SelectionChanged="FilterSelection_Changed">
-         <ComboBoxItem Content="Tất cả" IsSelected="True"/>
-         <ComboBoxItem Content="Có tiêm"/>
-         <ComboBoxItem Content="Không tiêm"/>
-         <ComboBoxItem Content="Chưa xác định"/>
-        </ComboBox>
-       </StackPanel>
-      </UniformGrid>
-
-      <CheckBox x:Name="IncludeReturnedCheck"
-                Content="Hiển thị cả lịch đã trả"
-                Margin="0,4,0,0"
-                Checked="Filter_Changed"
-                Unchecked="Filter_Changed"/>
-
-     </StackPanel>
+     <Grid>
+      <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+      <Grid.ColumnDefinitions>
+       <ColumnDefinition Width="2.1*"/><ColumnDefinition Width="2.1*"/><ColumnDefinition Width="1.1*"/><ColumnDefinition Width="1.5*"/>
+      </Grid.ColumnDefinitions>
+      <StackPanel Grid.Column="0" Margin="0,0,8,0">
+       <TextBlock Text="Từ ngày" FontSize="12" Margin="0,0,0,3"/>
+       <DockPanel LastChildFill="True">
+        <Button Content="−" Width="25" Height="30" Margin="0,0,3,0" Padding="0" ToolTip="Lùi một ngày" Click="FromDateMinus_Click"/>
+        <Button Content="+" Width="25" Height="30" Margin="3,0,0,0" Padding="0" DockPanel.Dock="Right" ToolTip="Tiến một ngày" Click="FromDatePlus_Click"/>
+        <DatePicker x:Name="FromDatePicker" Language="vi-VN" Height="30" SelectedDateChanged="FilterSelection_Changed"/>
+       </DockPanel>
+      </StackPanel>
+      <StackPanel Grid.Column="1" Margin="0,0,8,0">
+       <TextBlock Text="Đến ngày" FontSize="12" Margin="0,0,0,3"/>
+       <DockPanel LastChildFill="True">
+        <Button Content="−" Width="25" Height="30" Margin="0,0,3,0" Padding="0" ToolTip="Lùi một ngày" Click="ToDateMinus_Click"/>
+        <Button Content="+" Width="25" Height="30" Margin="3,0,0,0" Padding="0" DockPanel.Dock="Right" ToolTip="Tiến một ngày" Click="ToDatePlus_Click"/>
+        <DatePicker x:Name="ToDatePicker" Language="vi-VN" Height="30" SelectedDateChanged="FilterSelection_Changed"/>
+       </DockPanel>
+      </StackPanel>
+      <StackPanel Grid.Column="2" Margin="0,0,8,0">
+       <TextBlock Text="Buổi" FontSize="12" Margin="0,0,0,3"/>
+       <ComboBox x:Name="FilterShiftBox" Height="30" SelectionChanged="FilterSelection_Changed">
+        <ComboBoxItem Content="Cả ngày" IsSelected="True"/><ComboBoxItem Content="Sáng"/><ComboBoxItem Content="Chiều"/>
+       </ComboBox>
+      </StackPanel>
+      <StackPanel Grid.Column="3">
+       <TextBlock Text="Tiêm thuốc cản quang" FontSize="12" Margin="0,0,0,3"/>
+       <ComboBox x:Name="InjectionFilterBox" Height="30" SelectionChanged="FilterSelection_Changed">
+        <ComboBoxItem Content="Tất cả" IsSelected="True"/><ComboBoxItem Content="Có tiêm"/><ComboBoxItem Content="Không tiêm"/><ComboBoxItem Content="Chưa xác định"/>
+       </ComboBox>
+      </StackPanel>
+      <CheckBox Grid.Row="1" Grid.ColumnSpan="4" x:Name="IncludeReturnedCheck" Content="Hiển thị cả lịch đã trả" Margin="0,8,0,0" Checked="Filter_Changed" Unchecked="Filter_Changed"/>
+     </Grid>
     </Border>
 
     <Border Grid.Row="2"
@@ -369,7 +353,7 @@
               Background="White"
               BorderBrush="#DCE5E8"
               HeadersVisibility="Column"
-              RowHeight="42" FontSize="15.5"/>
+              RowHeight="34" FontSize="13.5"/>
 
     <StackPanel Grid.Row="4"
                 Orientation="Horizontal"
