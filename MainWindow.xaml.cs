@@ -515,7 +515,7 @@ namespace PatientAppointmentManager
 
         private void ShowHospitalScanResults(List<HospitalScanRow> rows)
         {
-            var window = new Window { Title="Kết quả quét chỉ định", Width=1050, Height=620, MinWidth=780, MinHeight=420,
+            var window = new Window { Title="Kết quả quét chỉ định", Width=1250, Height=680, MinWidth=900, MinHeight=480,
                 Owner=this, WindowStartupLocation=WindowStartupLocation.CenterOwner, Background=System.Windows.Media.Brushes.White };
             var root = new DockPanel { Margin=new Thickness(12) };
             var summary = new TextBlock { Text="Đã quét " + rows.Count + " dòng. Đối chiếu theo Mã BN + Số phiếu (Số phiếu được dùng làm Mã chỉ định). Lịch trùng được đánh dấu để bạn xử lý thủ công.",
@@ -531,10 +531,13 @@ namespace PatientAppointmentManager
             grid.Columns.Add(new DataGridTextColumn { Header="Tên bệnh nhân", Binding=new System.Windows.Data.Binding("PatientName"), Width=160 });
             grid.Columns.Add(new DataGridTextColumn { Header="Khoa/phòng", Binding=new System.Windows.Data.Binding("Department"), Width=145 });
             grid.Columns.Add(new DataGridTextColumn { Header="Thời gian chỉ định", Binding=new System.Windows.Data.Binding("OrderedAt"), Width=140 });
-            grid.Columns.Add(new DataGridTextColumn { Header="Dịch vụ", Binding=new System.Windows.Data.Binding("ServiceName"), Width=150 });
+            var serviceColumn = new DataGridTextColumn { Header="Dịch vụ (toàn bộ)", Binding=new System.Windows.Data.Binding("ServiceName"), Width=260 };
+            serviceColumn.ElementStyle = new Style(typeof(TextBlock));
+            serviceColumn.ElementStyle.Setters.Add(new Setter(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis));
+            serviceColumn.ElementStyle.Setters.Add(new Setter(FrameworkElement.ToolTipProperty, new System.Windows.Data.Binding("ServiceName")));
+            grid.Columns.Add(serviceColumn);
             grid.Columns.Add(new DataGridTextColumn { Header="Lịch đã lưu", Binding=new System.Windows.Data.Binding("ExistingAppointmentDate"), Width=95 });
             grid.Columns.Add(new DataGridTextColumn { Header="Buổi", Binding=new System.Windows.Data.Binding("ExistingShift"), Width=65 });
-            root.Children.Add(grid);
             var buttons = new StackPanel { Orientation=Orientation.Horizontal, HorizontalAlignment=HorizontalAlignment.Right, Margin=new Thickness(0,10,0,0) };
             var returnButton = new Button { Content="Trả hẹn lịch cũ", Width=135, Height=34, Margin=new Thickness(0,0,8,0) };
             returnButton.Click += (s,e) => {
@@ -555,7 +558,11 @@ namespace PatientAppointmentManager
             keepButton.Click += (s,e) => { var selected=grid.SelectedItem as HospitalScanRow; if(selected==null){MessageBox.Show(window,"Chọn một dòng trước.");return;} if(selected.ExistingAppointmentId<=0){MessageBox.Show(window,"Dòng này chưa có lịch. Dùng nút Tạo lịch hẹn.");return;} window.Close(); };
             var closeButton = new Button { Content="Hủy / Đóng", Width=95, Height=34 }; closeButton.Click += (s,e)=>window.Close();
             buttons.Children.Add(returnButton); buttons.Children.Add(keepButton); buttons.Children.Add(createButton); buttons.Children.Add(closeButton);
-            DockPanel.SetDock(buttons,Dock.Bottom); root.Children.Add(buttons); window.Content=root; window.ShowDialog();
+            DockPanel.SetDock(buttons,Dock.Bottom);
+            root.Children.Add(buttons);
+            root.Children.Add(grid);
+            window.Content=root;
+            window.ShowDialog();
         }
 
         private static string DetectInjectionStatus(string serviceName)
@@ -584,7 +591,7 @@ namespace PatientAppointmentManager
             panel.Children.Add(new TextBlock { Text="Buổi hẹn", Margin=new Thickness(0,0,0,4) });
             var shift = new ComboBox { Height=32, SelectedIndex=0, Margin=new Thickness(0,0,0,14) };
             shift.Items.Add("Sáng"); shift.Items.Add("Chiều"); panel.Children.Add(shift);
-            panel.Children.Add(new TextBlock { Text="Tiêm thuốc cản quang: " + row.InjectionStatus, FontWeight=FontWeights.SemiBold, Margin=new Thickness(0,0,0,14) });
+            panel.Children.Add(new TextBlock { Text="Chỉ cần chọn ngày hẹn và buổi hẹn. Thông tin bệnh nhân và chỉ định sẽ được tự điền.", TextWrapping=TextWrapping.Wrap, Margin=new Thickness(0,0,0,14), Foreground=System.Windows.Media.Brushes.DimGray });
             var actions = new StackPanel { Orientation=Orientation.Horizontal, HorizontalAlignment=HorizontalAlignment.Right };
             var save = new Button { Content="Tạo lịch hẹn", Width=110, Height=34, IsDefault=true, Margin=new Thickness(0,0,8,0) };
             var cancel = new Button { Content="Hủy", Width=80, Height=34, IsCancel=true };

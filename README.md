@@ -65,3 +65,12 @@ Lưu ý kiểm thử: phân loại Có tiêm/Không tiêm hiện dựa trên t�
 - Không phụ thuộc tiêu đề cột có bị rút gọn hay không.
 - Trả về số dòng ứng viên và số dòng hợp lệ để hỗ trợ chẩn đoán.
 - Giữ nguyên cặp đối chiếu Mã BN + Số phiếu.
+
+
+## v0.5.5 - Hoàn thiện thao tác tạo lịch từ kết quả quét
+
+- Sửa thứ tự phần tử trong DockPanel để thanh nút Trả hẹn / Giữ lịch / Tạo lịch hẹn / Hủy luôn hiển thị ở cạnh dưới cửa sổ.
+- Mở rộng cửa sổ kết quả quét.
+- Mở rộng cột Dịch vụ và thêm tooltip chứa toàn bộ tên dịch vụ khi rê chuột.
+- Cửa sổ tạo lịch chỉ yêu cầu người dùng chọn Ngày hẹn và Buổi hẹn; các trường bệnh nhân, mã BN, số phiếu, khoa/phòng, dịch vụ và trạng thái tiêm vẫn tự lấy từ dữ liệu quét.
+- Giữ kiểm tra trùng lần cuối trước khi ghi SQLite.
