@@ -390,82 +390,70 @@ namespace PatientAppointmentManager
 
         private const string HospitalScanScript = @"
 (function () {
-  function clean(v) {
-    return (v || '').replace(/\s+/g, ' ').replace(/[↕⇅▼▲]/g, '').trim();
-  }
+  function clean(v) { return (v || '').replace(/\s+/g, ' ').trim(); }
+  function txt(el) { return clean(el ? (el.innerText || el.textContent || '') : ''); }
   function visible(el) {
     if (!el) return false;
-    var s = window.getComputedStyle(el);
-    return s.display !== 'none' && s.visibility !== 'hidden' && el.getClientRects().length > 0;
+    var st = window.getComputedStyle(el);
+    return st.display !== 'none' && st.visibility !== 'hidden' && el.getClientRects().length > 0;
   }
-  function textOf(el) { return clean(el ? (el.innerText || el.textContent || '') : ''); }
-  function headerCells(table) {
-    var nodes = table.querySelectorAll('thead th, thead td, tr:first-child th, tr:first-child td, [role=columnheader]');
-    var out = [];
-    for (var i=0;i<nodes.length;i++) {
-      // Giữ cả ô tiêu đề rỗng (ví dụ cột STT đầu bảng) để chỉ số cột khớp với row.cells.
-      out.push(textOf(nodes[i]));
+  function norm(v) {
+    var x = clean(v).toLowerCase();
+    try { x = x.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch(e) {}
+    return x.replace(/đ/g, 'd');
+  }
+
+  // Selector đã được xác nhận bằng công cụ DOM trên website bệnh viện.
+  var tables = Array.prototype.slice.call(document.querySelectorAll('table._st-table_gefxy_208'));
+  if (!tables.length) tables = Array.prototype.slice.call(document.querySelectorAll('table'));
+  tables = tables.filter(visible);
+  if (!tables.length) return JSON.stringify({error:'Không tìm thấy bảng chỉ định. Hãy mở trang danh sách bệnh nhân.'});
+
+  var chosen = null, bestRows = [], bestScore = -1, bestHeaders = [];
+  tables.forEach(function(t) {
+    var allRows = Array.prototype.slice.call(t.querySelectorAll('tr'));
+    var dataRows = allRows.filter(function(r) {
+      var cells = r.querySelectorAll('td');
+      return cells.length >= 13 && visible(r);
+    });
+    var headers = [];
+    var head = t.querySelector('thead tr');
+    if (head) {
+      var hc = head.querySelectorAll('th,td');
+      for (var i=0;i<hc.length;i++) headers.push(txt(hc[i]));
     }
-    return out;
-  }
-  function norm(s) {
-    return clean(s).toLowerCase().normalize ? clean(s).toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').replace(/đ/g,'d') : clean(s).toLowerCase();
-  }
-  var candidates = Array.prototype.slice.call(document.querySelectorAll('table,[role=grid],[role=table]')).filter(visible);
-  var chosen = null, chosenHeaders = [], chosenScore = -1;
-  candidates.forEach(function(t) {
-    var hs = headerCells(t);
-    var joined = norm(hs.join('|'));
-    var score = (joined.indexOf('so phieu') >= 0 ? 5 : 0)
-      + (joined.indexOf('ma bn') >= 0 ? 5 : 0)
-      + (joined.indexOf('ten benh nhan') >= 0 ? 2 : 0)
-      + (joined.indexOf('thoi gian chi dinh') >= 0 ? 1 : 0);
-    if (score > chosenScore) { chosen=t; chosenHeaders=hs; chosenScore=score; }
+    // Bảng đã xác nhận có 13 cột, gồm STT ở vị trí 0.
+    var score = dataRows.length * 10 + (t.className && String(t.className).indexOf('_st-table_gefxy_208') >= 0 ? 100 : 0);
+    if (score > bestScore) { chosen=t; bestRows=dataRows; bestScore=score; bestHeaders=headers; }
   });
-  if (!chosen || chosenScore < 10) return JSON.stringify({error:'Không tìm thấy bảng có đồng thời tiêu đề Số phiếu và Mã BN. Hãy mở trang danh sách chỉ định.'});
+  if (!chosen) return JSON.stringify({error:'Không tìm thấy bảng chỉ định phù hợp.'});
 
-  function findIndex(keys) {
-    for (var i=0;i<chosenHeaders.length;i++) {
-      var h=norm(chosenHeaders[i]);
-      for (var k=0;k<keys.length;k++) if (h===keys[k]) return i;
-    }
-    return -1;
-  }
-  var ix = {
-    receipt:findIndex(['so phieu']),
-    patient:findIndex(['ma bn']),
-    name:findIndex(['ten benh nhan']),
-    age:findIndex(['tuoi']),
-    dept:findIndex(['khoa/phong chi dinh','khoa phong chi dinh']),
-    time:findIndex(['thoi gian chi dinh']),
-    service:findIndex(['ten dich vu']),
-    room:findIndex(['phong'])
-  };
-  var rowNodes = chosen.querySelectorAll('tbody tr, [role=row]');
-  var rows = Array.prototype.slice.call(rowNodes);
-  if (!rows.length) rows = Array.prototype.slice.call(chosen.querySelectorAll('tr')).slice(1);
-
-  function cell(row, idx) {
-    if (idx < 0) return '';
-    var cells = row.querySelectorAll('td,th,[role=gridcell],[role=rowheader]');
-    return idx < cells.length ? textOf(cells[idx]) : '';
-  }
-  var data = [];
-  rows.forEach(function(r) {
-    if (!visible(r)) return;
-    var o = {
-      receiptCode:cell(r,ix.receipt),
-      patientCode:cell(r,ix.patient),
-      patientName:cell(r,ix.name),
-      age:cell(r,ix.age),
-      department:cell(r,ix.dept),
-      orderedAt:cell(r,ix.time),
-      serviceName:cell(r,ix.service),
-      room:cell(r,ix.room)
+  var rows = [];
+  bestRows.forEach(function(r) {
+    var c = r.querySelectorAll('td');
+    function at(i) { return i < c.length ? txt(c[i]) : ''; }
+    // Cột theo DOM đã xác nhận: 0 STT, 1 Số phiếu, 2 Mã lần khám,
+    // 3 Mã BN, 4 Tên BN, 5 Tuổi, 6 Khoa/phòng, 7 Thời gian,
+    // 8 Tên dịch vụ, 9 Phòng, 10 KTV, 11 Thứ tự, 12 Thao tác.
+    var item = {
+      receiptCode: at(1),
+      patientCode: at(3),
+      patientName: at(4),
+      age: at(5),
+      department: at(6),
+      orderedAt: at(7),
+      serviceName: at(8),
+      room: at(9)
     };
-    if (o.receiptCode && o.patientCode && !/so phieu|ma bn/i.test(o.receiptCode + ' ' + o.patientCode)) data.push(o);
+    if (item.receiptCode && item.patientCode) rows.push(item);
   });
-  return JSON.stringify({headers:chosenHeaders,rowCount:data.length,rows:data,debug:{candidateRows:rows.length,headerCount:chosenHeaders.length,selector:chosen.tagName}});
+  return JSON.stringify({
+    headers: bestHeaders,
+    rowCount: rows.length,
+    rows: rows,
+    debug: {selector: 'table._st-table_gefxy_208', candidateRows: bestRows.length,
+            acceptedRows: rows.length, cellCountExpected: 13}
+  });
 })()";
 
         private async void ScanHospitalList_Click(object sender, RoutedEventArgs e)

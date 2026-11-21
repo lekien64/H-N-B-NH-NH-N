@@ -56,3 +56,12 @@ Lưu ý kiểm thử: phân loại Có tiêm/Không tiêm hiện dựa trên t�
 - Chuẩn hóa tiêu đề tiếng Việt có dấu/không dấu trước khi ánh xạ cột.
 - Thêm thông tin chẩn đoán số hàng/tiêu đề khi bảng được tìm thấy nhưng không đọc được bệnh nhân.
 - Giữ nguyên .NET Framework 4.8 và CefSharp 109.
+
+
+## v0.5.4 - Ánh xạ theo cấu trúc bảng bệnh viện đã xác nhận
+
+- Ưu tiên selector `table._st-table_gefxy_208` đã được xác nhận bằng báo cáo DOM.
+- Đọc các dòng có đủ 13 ô và ánh xạ theo vị trí cột thực tế (STT ở cột 0; Số phiếu cột 1; Mã BN cột 3; ...).
+- Không phụ thuộc tiêu đề cột có bị rút gọn hay không.
+- Trả về số dòng ứng viên và số dòng hợp lệ để hỗ trợ chẩn đoán.
+- Giữ nguyên cặp đối chiếu Mã BN + Số phiếu.
