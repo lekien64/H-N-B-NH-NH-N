@@ -345,7 +345,7 @@
      </Grid>
     </Border>
 
-    <DataGrid x:Name="AppointmentsGrid" LoadingRow="AppointmentsGrid_LoadingRow"
+    <DataGrid x:Name="AppointmentsGrid" LoadingRow="AppointmentsGrid_LoadingRow" Sorting="AppointmentsGrid_Sorting"
               Grid.Row="3"
               AutoGenerateColumns="False"
               IsReadOnly="True"

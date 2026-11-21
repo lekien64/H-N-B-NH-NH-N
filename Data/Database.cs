@@ -399,7 +399,10 @@ SELECT
     ServiceName AS 'Dịch vụ',
     InjectionStatus AS 'Tiêm thuốc cản quang',
     strftime('%d/%m/%Y', AppointmentDate) AS 'Ngày hẹn',
+    date(AppointmentDate) AS AppointmentDateSort,
+    InjectionStatus AS InjectionSort,
     strftime('%d/%m/%Y %H:%M', datetime(CreatedAt)) AS 'Ngày tạo lịch',
+    datetime(CreatedAt) AS CreatedAtSort,
     TRIM(Shift) AS 'Buổi',
     CASE WHEN Status = 'Đã trả lịch' THEN 'Đã trả hẹn' ELSE Status END AS 'Trạng thái'
 FROM Appointments

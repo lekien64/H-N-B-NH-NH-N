@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Data;
+using System.ComponentModel;
 using System.Text;
 using System.Threading.Tasks;
 using System.Collections.Generic;
@@ -586,33 +587,46 @@ namespace PatientAppointmentManager
  function clean(v){return (v||'').replace(/\s+/g,' ').trim();}
  function norm(v){var x=clean(v).toLowerCase();try{x=x.normalize('NFD').replace(/[\u0300-\u036f]/g,'');}catch(e){}return x.replace(/đ/g,'d');}
  function text(el){return clean(el?(el.innerText||el.textContent||''):'');}
- var result=[], tables=Array.prototype.slice.call(document.querySelectorAll('table'));
- tables.forEach(function(table){
-  var headerRow=table.querySelector('thead tr')||table.querySelector('tr');
-  if(!headerRow)return;
-  var hs=Array.prototype.slice.call(headerRow.querySelectorAll('th,td')).map(text);
-  var patientIndex=-1, receiptIndex=-1, nameIndex=-1, deptIndex=-1, serviceIndex=-1, ageIndex=-1;
-  hs.forEach(function(h,i){var n=norm(h);
-   if(patientIndex<0 && (n==='ma bn'||n.indexOf('ma benh nhan')>=0))patientIndex=i;
-   if(receiptIndex<0 && (n.indexOf('so phieu')>=0||n.indexOf('ma chi dinh')>=0))receiptIndex=i;
-   if(nameIndex<0 && (n.indexOf('ten benh nhan')>=0||n==='ho ten'))nameIndex=i;
-   if(deptIndex<0 && (n.indexOf('khoa')>=0||n.indexOf('phong')>=0))deptIndex=i;
-   if(serviceIndex<0 && (n.indexOf('dich vu')>=0||n.indexOf('ten chi dinh')>=0))serviceIndex=i;
-   if(ageIndex<0 && (n==='tuoi'||n.indexOf('tuoi')>=0))ageIndex=i;
-  });
-  if(patientIndex<0||receiptIndex<0)return;
-  var trs=Array.prototype.slice.call(table.querySelectorAll('tbody tr'));
-  if(!trs.length)trs=Array.prototype.slice.call(table.querySelectorAll('tr')).slice(1);
-  trs.forEach(function(tr){var cells=Array.prototype.slice.call(tr.querySelectorAll('td'));if(!cells.length)return;
-   function at(i){return i>=0&&i<cells.length?text(cells[i]):'';}
-   var patient=at(patientIndex),receipt=at(receiptIndex);
-   if(!patient||!receipt||patient.length<3||receipt.length<3)return;
-   if(!/[0-9]/.test(patient)||!/[0-9]/.test(receipt))return;
-   result.push({patientCode:patient,receiptCode:receipt,patientName:at(nameIndex),department:at(deptIndex),serviceName:at(serviceIndex),age:at(ageIndex)});
+ var result=[], seen={};
+ function add(patient,receipt,name,dept,service,age){
+  patient=clean(patient);receipt=clean(receipt);
+  if(!patient||!receipt||patient.length<3||receipt.length<3||!/[0-9]/.test(patient)||!/[0-9]/.test(receipt))return;
+  var key=patient+'|'+receipt;if(seen[key])return;seen[key]=1;
+  result.push({patientCode:patient,receiptCode:receipt,patientName:clean(name),department:clean(dept),serviceName:clean(service),age:clean(age)});
+ }
+ // Bảng chỉ định của bệnh viện đã được xác nhận: 13 cột cố định.
+ var known=Array.prototype.slice.call(document.querySelectorAll('table._st-table_gefxy_208'));
+ known.forEach(function(table){
+  Array.prototype.slice.call(table.querySelectorAll('tr')).forEach(function(tr){
+   var c=Array.prototype.slice.call(tr.querySelectorAll('td'));if(c.length<13)return;
+   function at(i){return text(c[i]);}
+   add(at(3),at(1),at(4),at(6),at(8),at(5));
   });
  });
- var unique={}, rows=[];result.forEach(function(r){var k=r.patientCode+'|'+r.receiptCode;if(!unique[k]){unique[k]=1;rows.push(r);}});
- return JSON.stringify(rows);
+ // Các bảng kết quả tìm bệnh nhân: dò theo tiêu đề thay vì phụ thuộc thứ tự cột.
+ var tables=Array.prototype.slice.call(document.querySelectorAll('table'));
+ tables.forEach(function(table){
+  if(known.indexOf(table)>=0)return;
+  var headerRow=table.querySelector('thead tr')||table.querySelector('tr');if(!headerRow)return;
+  var hs=Array.prototype.slice.call(headerRow.querySelectorAll('th,td')).map(text);
+  var pi=-1,ri=-1,ni=-1,di=-1,si=-1,ai=-1;
+  hs.forEach(function(h,i){var n=norm(h);
+   if(pi<0&&(n==='ma bn'||n.indexOf('ma benh nhan')>=0))pi=i;
+   if(ri<0&&(n.indexOf('so phieu')>=0||n.indexOf('ma chi dinh')>=0))ri=i;
+   if(ni<0&&(n.indexOf('ten benh nhan')>=0||n==='ho ten'))ni=i;
+   if(di<0&&(n.indexOf('khoa')>=0||n.indexOf('phong')>=0))di=i;
+   if(si<0&&(n.indexOf('dich vu')>=0||n.indexOf('ten chi dinh')>=0))si=i;
+   if(ai<0&&n.indexOf('tuoi')>=0)ai=i;
+  });
+  if(pi<0||ri<0)return;
+  var trs=Array.prototype.slice.call(table.querySelectorAll('tbody tr'));
+  if(!trs.length)trs=Array.prototype.slice.call(table.querySelectorAll('tr')).slice(1);
+  trs.forEach(function(tr){var c=Array.prototype.slice.call(tr.querySelectorAll('td'));if(!c.length)return;
+   function at(i){return i>=0&&i<c.length?text(c[i]):'';}
+   add(at(pi),at(ri),at(ni),at(di),at(si),at(ai));
+  });
+ });
+ return JSON.stringify(result);
 })()";
 
         private async void AutoDuplicateTimer_Tick(object sender, EventArgs e)
@@ -743,11 +757,11 @@ namespace PatientAppointmentManager
                     string receipt = GetScanValue(d, "receiptCode");
                     string patient = GetScanValue(d, "patientCode");
                     if (string.IsNullOrWhiteSpace(receipt) || string.IsNullOrWhiteSpace(patient)) continue;
-                    var match = Database.FindActiveAppointment(patient, receipt);
+                    var match = Database.FindLatestAppointment(patient, receipt);
                     var r = new HospitalScanRow { ReceiptCode=receipt, PatientCode=patient,
                         PatientName=GetScanValue(d,"patientName"), Age=GetScanValue(d,"age"), Department=GetScanValue(d,"department"),
                         InjectionStatus=DetectInjectionStatus(GetScanValue(d,"serviceName")), OrderedAt=GetScanValue(d,"orderedAt"), ServiceName=GetScanValue(d,"serviceName"), Room=GetScanValue(d,"room") };
-                    if (match != null) { r.Status="ĐÃ CÓ LỊCH"; r.ExistingAppointmentId=match.Id; r.ExistingAppointmentDate=match.AppointmentDate.ToString("dd/MM/yyyy"); r.ExistingShift=match.Shift; }
+                    if (match != null) { r.Status = match.Status == "Đã hẹn" ? "ĐÃ CÓ LỊCH" : "ĐÃ TRẢ HẸN"; r.ExistingAppointmentId=match.Id; r.ExistingAppointmentDate=match.AppointmentDate.ToString("dd/MM/yyyy"); r.ExistingShift=match.Shift; }
                     else r.Status="CHƯA CÓ LỊCH";
                     results.Add(r);
                 }
@@ -758,6 +772,19 @@ namespace PatientAppointmentManager
                 }
                 int incompleteServices = results.Count(x => string.IsNullOrWhiteSpace(x.ServiceName) ||
                     x.ServiceName.TrimEnd('.', '…').Length <= 0 || x.ServiceName.EndsWith("...", StringComparison.Ordinal));
+                // Quét thủ công cũng phải cảnh báo ngay khi phát hiện cặp mã đã có lịch.
+                var duplicates = results.Where(x => x.ExistingAppointmentId > 0).ToList();
+                foreach (var duplicateRow in duplicates)
+                    _autoVisiblePairs.Add(duplicateRow.PatientCode.Trim() + "|" + duplicateRow.ReceiptCode.Trim());
+                var duplicate = duplicates.FirstOrDefault();
+                if (duplicate != null)
+                {
+                    var savedAppointment = Database.FindLatestAppointment(duplicate.PatientCode, duplicate.ReceiptCode);
+                    if (savedAppointment != null)
+                    {
+                        ShowAutomaticDuplicateNotice(duplicate, savedAppointment);
+                    }
+                }
                 ShowHospitalScanResults(results);
                 if (incompleteServices > 0)
                     ShowAppMessage("Đã đọc " + results.Count + " dòng, nhưng có " + incompleteServices +
@@ -846,7 +873,7 @@ namespace PatientAppointmentManager
             panel.Children.Add(new TextBlock { Text=row.PatientName + "  |  " + row.PatientCode, FontSize=17, FontWeight=FontWeights.Bold, TextWrapping=TextWrapping.Wrap, Margin=new Thickness(0,0,0,8) });
             panel.Children.Add(new TextBlock { Text="Số phiếu: " + row.ReceiptCode + "\nDịch vụ: " + row.ServiceName, TextWrapping=TextWrapping.Wrap, Margin=new Thickness(0,0,0,12) });
             if(row.InjectionStatus=="Chưa xác định") panel.Children.Add(new TextBlock { Text="⚠ Chưa xác định được trạng thái tiêm. Bạn vẫn có thể tạo lịch; trạng thái này sẽ được lưu để kiểm tra sau.", Foreground=System.Windows.Media.Brushes.DarkOrange, TextWrapping=TextWrapping.Wrap, Margin=new Thickness(0,0,0,12) });
-            panel.Children.Add(new TextBlock { Text="Ngày hẹn", Margin=new Thickness(0,0,0,4) }); panel.Children.Add(date);
+            panel.Children.Add(new TextBlock { Text="Ngày hẹn", Margin=new Thickness(0,0,0,4) }); panel.Children.Add(CreateScheduleDateControl(date));
             panel.Children.Add(new TextBlock { Text="Buổi hẹn", Margin=new Thickness(0,0,0,4) }); panel.Children.Add(shift);
             panel.Children.Add(new TextBlock { Text=isChange?"Chỉ cập nhật ngày và buổi của lịch hiện tại.":"Chỉ cần chọn ngày hẹn và buổi hẹn. Thông tin bệnh nhân và chỉ định sẽ được tự điền.", TextWrapping=TextWrapping.Wrap, Margin=new Thickness(0,0,0,16), Foreground=System.Windows.Media.Brushes.DimGray });
             var actions = new StackPanel { Orientation=Orientation.Horizontal, HorizontalAlignment=HorizontalAlignment.Center, Margin=new Thickness(0,4,0,0) };
@@ -866,6 +893,19 @@ namespace PatientAppointmentManager
             };
             actions.Children.Add(save); actions.Children.Add(cancel); panel.Children.Add(actions); dialog.Content=panel;
             return dialog.ShowDialog()==true && saved;
+        }
+
+        private static DockPanel CreateScheduleDateControl(DatePicker date)
+        {
+            var panel = new DockPanel { LastChildFill = true, Margin = new Thickness(0,0,0,14) };
+            var minus = new Button { Content = "−", Width = 34, Height = 36, Margin = new Thickness(0,0,5,0), Padding = new Thickness(0), ToolTip = "Lùi một ngày" };
+            var plus = new Button { Content = "+", Width = 34, Height = 36, Margin = new Thickness(5,0,0,0), Padding = new Thickness(0), ToolTip = "Tiến một ngày" };
+            minus.Click += (s,e) => date.SelectedDate = (date.SelectedDate ?? DateTime.Today).AddDays(-1);
+            plus.Click += (s,e) => date.SelectedDate = (date.SelectedDate ?? DateTime.Today).AddDays(1);
+            DockPanel.SetDock(minus, Dock.Left); DockPanel.SetDock(plus, Dock.Right);
+            date.Height = 36; date.Margin = new Thickness(0);
+            panel.Children.Add(minus); panel.Children.Add(plus); panel.Children.Add(date);
+            return panel;
         }
 
         private bool CreateAppointmentFromScan(HospitalScanRow row, Window owner)
@@ -1220,43 +1260,16 @@ namespace PatientAppointmentManager
             bool returned = Convert.ToString(row["Trạng thái"]) == "Đã trả hẹn";
             e.Row.Foreground = returned ? System.Windows.Media.Brushes.Gray : System.Windows.Media.Brushes.DarkSlateGray;
             e.Row.Opacity = returned ? 0.72 : 1.0;
-            e.Row.UpdateLayout();
+            // Không đặt Background/BorderBrush cục bộ ở đây: các DataTrigger của CellStyle
+            // cần được quyền tô nền và viền cho hai cột trạng thái.
             foreach (var cell in FindVisualChildren<DataGridCell>(e.Row))
             {
                 var text = cell.Content as TextBlock;
                 if (text != null)
                     text.TextDecorations = returned ? TextDecorations.Strikethrough : null;
-                cell.Background = System.Windows.Media.Brushes.Transparent;
-                cell.BorderThickness = new Thickness(0);
-                cell.BorderBrush = System.Windows.Media.Brushes.Transparent;
-                cell.Padding = new Thickness(3, 1, 3, 1);
-                cell.Foreground = returned ? System.Windows.Media.Brushes.Gray : System.Windows.Media.Brushes.DarkSlateGray;
                 string header = cell.Column == null ? "" : Convert.ToString(cell.Column.Header);
-                if (header == "Buổi")
-                {
-                    string shift = Convert.ToString(row["Buổi"]);
-                    cell.Background = shift == "Sáng"
-                        ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 229, 153))
-                        : shift == "Chiều" ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(190, 220, 255)) : System.Windows.Media.Brushes.White;
-                    cell.Foreground = shift == "Sáng"
-                        ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(125, 83, 0))
-                        : new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(28, 83, 145));
-                    cell.BorderBrush = shift == "Sáng"
-                        ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(210, 155, 35))
-                        : new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(75, 135, 205));
-                    cell.BorderThickness = new Thickness(1);
-                }
-                else if (header == "Tiêm thuốc cản quang")
-                {
-                    string injection = Convert.ToString(row["Tiêm thuốc cản quang"]);
-                    if (injection == "Có tiêm")
-                    { cell.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(210, 242, 218)); cell.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(24, 112, 55)); cell.BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(75, 170, 105)); }
-                    else if (injection == "Không tiêm")
-                    { cell.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(232, 237, 242)); cell.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(75, 87, 96)); cell.BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(145, 158, 170)); }
-                    else
-                    { cell.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 229, 199)); cell.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(150, 83, 12)); cell.BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 145, 65)); }
-                    cell.BorderThickness = new Thickness(1);
-                }
+                if (header != "Buổi" && header != "Tiêm thuốc cản quang")
+                    cell.Foreground = returned ? System.Windows.Media.Brushes.Gray : System.Windows.Media.Brushes.DarkSlateGray;
             }
         }
 
@@ -1391,6 +1404,16 @@ namespace PatientAppointmentManager
             return "Chưa xác định";
         }
 
+        private static void AddGridCellTrigger(Style style, string value, System.Windows.Media.Color background, System.Windows.Media.Color border, System.Windows.Media.Color foreground)
+        {
+            var trigger = new DataTrigger { Binding = new System.Windows.Data.Binding("[Tiêm thuốc cản quang]"), Value = value };
+            trigger.Setters.Add(new Setter(Control.BackgroundProperty, new System.Windows.Media.SolidColorBrush(background)));
+            trigger.Setters.Add(new Setter(Control.BorderBrushProperty, new System.Windows.Media.SolidColorBrush(border)));
+            trigger.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(1)));
+            trigger.Setters.Add(new Setter(Control.ForegroundProperty, new System.Windows.Media.SolidColorBrush(foreground)));
+            style.Triggers.Add(trigger);
+        }
+
         private void ConfigureAppointmentsGrid(DataTable data)
         {
             AppointmentsGrid.AutoGenerateColumns = false;
@@ -1440,6 +1463,30 @@ namespace PatientAppointmentManager
                 headerStyle.Setters.Add(new Setter(Control.FontSizeProperty, 12.5));
                 headerStyle.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(3, 5, 3, 5)));
 
+                var cellStyle = new Style(typeof(DataGridCell));
+                cellStyle.Setters.Add(new Setter(Control.PaddingProperty, new Thickness(3,1,3,1)));
+                cellStyle.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(0)));
+                if (name == "Buổi")
+                {
+                    var morning = new DataTrigger { Binding = new System.Windows.Data.Binding("[Buổi]"), Value = "Sáng" };
+                    morning.Setters.Add(new Setter(Control.BackgroundProperty, new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255,229,153))));
+                    morning.Setters.Add(new Setter(Control.BorderBrushProperty, new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(210,155,35))));
+                    morning.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(1)));
+                    morning.Setters.Add(new Setter(Control.ForegroundProperty, new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(125,83,0))));
+                    cellStyle.Triggers.Add(morning);
+                    var afternoon = new DataTrigger { Binding = new System.Windows.Data.Binding("[Buổi]"), Value = "Chiều" };
+                    afternoon.Setters.Add(new Setter(Control.BackgroundProperty, new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(190,220,255))));
+                    afternoon.Setters.Add(new Setter(Control.BorderBrushProperty, new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(75,135,205))));
+                    afternoon.Setters.Add(new Setter(Control.BorderThicknessProperty, new Thickness(1)));
+                    afternoon.Setters.Add(new Setter(Control.ForegroundProperty, new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(28,83,145))));
+                    cellStyle.Triggers.Add(afternoon);
+                }
+                else if (name == "Tiêm thuốc cản quang")
+                {
+                    AddGridCellTrigger(cellStyle, "Có tiêm", System.Windows.Media.Color.FromRgb(210,242,218), System.Windows.Media.Color.FromRgb(75,170,105), System.Windows.Media.Color.FromRgb(24,112,55));
+                    AddGridCellTrigger(cellStyle, "Không tiêm", System.Windows.Media.Color.FromRgb(232,237,242), System.Windows.Media.Color.FromRgb(145,158,170), System.Windows.Media.Color.FromRgb(75,87,96));
+                    AddGridCellTrigger(cellStyle, "Chưa xác định", System.Windows.Media.Color.FromRgb(255,229,199), System.Windows.Media.Color.FromRgb(220,145,65), System.Windows.Media.Color.FromRgb(150,83,12));
+                }
                 var column = new DataGridTextColumn
                 {
                     Header = name,
@@ -1449,9 +1496,36 @@ namespace PatientAppointmentManager
                         : new DataGridLength(width),
                     MinWidth = width,
                     ElementStyle = textStyle,
-                    HeaderStyle = headerStyle
+                    HeaderStyle = headerStyle,
+                    CellStyle = cellStyle,
+                    SortMemberPath = name
                 };
                 AppointmentsGrid.Columns.Add(column);
+            }
+        }
+
+        private void AppointmentsGrid_Sorting(object sender, DataGridSortingEventArgs e)
+        {
+            e.Handled = true;
+            try
+            {
+                var view = AppointmentsGrid.ItemsSource as DataView;
+                if (view == null) return;
+                string header = Convert.ToString(e.Column.Header);
+                string sortColumn = header;
+                if (header == "Ngày hẹn") sortColumn = "AppointmentDateSort";
+                else if (header == "Tiêm thuốc cản quang") sortColumn = "InjectionSort";
+                else if (header == "Ngày tạo lịch") sortColumn = "CreatedAtSort";
+                ListSortDirection direction = e.Column.SortDirection == ListSortDirection.Ascending
+                    ? ListSortDirection.Descending : ListSortDirection.Ascending;
+                view.Sort = "[" + sortColumn.Replace("]", "]]" ) + "] " + (direction == ListSortDirection.Ascending ? "ASC" : "DESC");
+                foreach (var column in AppointmentsGrid.Columns) column.SortDirection = null;
+                e.Column.SortDirection = direction;
+            }
+            catch (Exception ex)
+            {
+                ShowAppMessage("Không thể sắp xếp cột này. Danh sách vẫn được giữ nguyên.\n\n" + ex.Message,
+                    "Sắp xếp", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 
