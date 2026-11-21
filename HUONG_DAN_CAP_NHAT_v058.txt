@@ -1,0 +1,16 @@
+SO HEN CT v0.5.8 - HUONG DAN CAP NHAT
+
+1. Sao luu thu muc ma nguon hien tai va tep SQLite cua nguoi dung.
+2. Giai nen goi ZIP v0.5.8.
+3. Dua toan bo noi dung thu muc SoHenCT_v051_build len nhanh feature/v0.2-cefsharp-browser.
+4. Chay GitHub Actions build-windows.yml.
+5. Neu build thanh cong, cai tren may thu nghiem va kiem tra:
+   - Quet danh sach chi dinh co nhieu dong.
+   - Doi chieu tung So phieu + Ma BN.
+   - Kiem tra ten dich vu co bi rut gon dau ... hay khong.
+   - Neu con dau ..., ung dung phai hien canh bao va khong duoc coi la da lay du ten dich vu.
+   - Kiem tra bo cuc bang Lich da hen, Ngay tao lich o cot cuoi.
+   - Kiem tra mau Sang/Chieu va Co tiem/Khong tiem/Chua xac dinh.
+6. Khong xoa database cu. Khong dua len main truoc khi thu nghiem xong.
+
+Luu y: v0.5.8 da duoc kiem tra cu phap JavaScript va XML XAML/CSPROJ trong moi truong tao goi. Chua co MSBuild de xac nhan build APK/EXE tren Windows va chua the xac nhan live extraction voi website noi bo.

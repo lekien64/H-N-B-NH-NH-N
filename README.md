@@ -95,3 +95,14 @@ Lưu ý kiểm thử: phân loại Có tiêm/Không tiêm hiện dựa trên t�
 - Giữ nguyên cơ sở dữ liệu hiện có, không xóa lịch cũ; không thay đổi CefSharp 109.1.110 và .NET Framework 4.8.
 
 **Trạng thái kiểm tra:** Đã kiểm tra XML XAML/Project và rà soát các thay đổi mã nguồn. Môi trường tạo gói hiện tại không có MSBuild/Visual Studio nên chưa thể xác nhận biên dịch. Cần chạy GitHub Actions và kiểm tra thực tế trên Windows 7/Windows 11 trước khi sử dụng.
+
+## v0.5.8 – Service extraction and appointment list readability
+
+- Improved service-name extraction: reads existing Ant Design Popover content, title/ARIA/data attributes, and React props/fiber data when available. No mouse simulation or hover delay is used.
+- If a service still appears truncated with `...`, the scan results remain available but the app shows a warning identifying that some service names are incomplete. Verify those rows before creating appointments.
+- Appointment list columns are explicitly ordered with **Ngày tạo lịch** as the final column.
+- Improved department column width/alignment, increased table text size and row height, and applied subtle alternating row backgrounds.
+- Shift colors: Sáng (soft amber), Chiều (soft blue). Injection colors: Có tiêm (green), Không tiêm (gray), Chưa xác định (orange).
+- Existing SQLite data and schema are preserved.
+
+Build status: source package and static XML/JavaScript syntax checks only. A Windows/MSBuild compilation and live hospital-site scan are still required before treating full service extraction as verified.

@@ -402,6 +402,82 @@ namespace PatientAppointmentManager
     try { x = x.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); } catch(e) {}
     return x.replace(/đ/g, 'd');
   }
+  function serviceCandidate(value, shown) {
+    var v = clean(value);
+    if (!v || v.length <= shown.length) return '';
+    var n = norm(v);
+    // Ưu tiên chuỗi mô tả dịch vụ có cùng phần đầu với nội dung đang hiển thị.
+    var prefix = norm(shown).replace(/[.…]+$/g, '').trim();
+    if (prefix && n.indexOf(prefix.substring(0, Math.min(prefix.length, 18))) < 0 &&
+        n.indexOf('chup') < 0 && n.indexOf('dich vu') < 0) return '';
+    if (v.length > 1200) return '';
+    return v;
+  }
+  function deepServiceStrings(root, shown) {
+    var found = [], seen = [];
+    function walk(obj, depth) {
+      if (obj == null || depth > 5) return;
+      if (typeof obj === 'string') {
+        var candidate = serviceCandidate(obj, shown);
+        if (candidate) found.push(candidate);
+        return;
+      }
+      if (typeof obj !== 'object' || seen.indexOf(obj) >= 0) return;
+      seen.push(obj);
+      var keys;
+      try { keys = Object.keys(obj).slice(0, 80); } catch(e) { return; }
+      for (var i=0;i<keys.length;i++) {
+        var key = keys[i];
+        if (/^(_owner|_store|return|child|sibling|stateNode|alternate|dependencies)$/i.test(key)) continue;
+        try { walk(obj[key], depth + 1); } catch(e) {}
+      }
+    }
+    walk(root, 0);
+    found.sort(function(a,b){ return b.length-a.length; });
+    return found.length ? found[0] : '';
+  }
+  function getFullService(cell, shown) {
+    if (!cell) return shown;
+    var candidates = [];
+    // Thuộc tính title/aria-label/data-* có thể giữ nguyên nội dung trước khi CSS rút gọn.
+    var nodes = [cell].concat(Array.prototype.slice.call(cell.querySelectorAll('*')));
+    nodes.forEach(function(el) {
+      ['title','aria-label','data-original-title','data-title','data-content','data-tooltip-content'].forEach(function(a) {
+        try { var v = serviceCandidate(el.getAttribute(a), shown); if (v) candidates.push(v); } catch(e) {}
+      });
+      // React lưu dữ liệu gốc trong props/fiber dù textContent đã bị rút gọn.
+      try {
+        Object.keys(el).forEach(function(k) {
+          if (k.indexOf('__reactProps$') === 0) {
+            var v = deepServiceStrings(el[k], shown); if (v) candidates.push(v);
+          }
+          if (k.indexOf('__reactFiber$') === 0) {
+            var fiber = el[k], hops = 0;
+            while (fiber && hops++ < 8) {
+              var v1 = deepServiceStrings(fiber.memoizedProps, shown);
+              var v2 = deepServiceStrings(fiber.pendingProps, shown);
+              if (v1) candidates.push(v1); if (v2) candidates.push(v2);
+              fiber = fiber.return;
+            }
+          }
+        });
+      } catch(e) {}
+    });
+    // Đọc Popover theo aria-describedby nếu phần tử đã tồn tại, không giả lập rê chuột.
+    var serviceSpan = cell.querySelector('span[aria-describedby]');
+    if (serviceSpan) {
+      var describedId = serviceSpan.getAttribute('aria-describedby');
+      var describedNode = describedId ? document.getElementById(describedId) : null;
+      if (describedNode) {
+        var popoverInner = describedNode.querySelector('.ant-popover-inner') ||
+                           (describedNode.classList && describedNode.classList.contains('ant-popover-inner') ? describedNode : null);
+        var fullText = txt(popoverInner || describedNode).replace(/^Tên dịch vụ\s*/i, '').trim();
+        var c = serviceCandidate(fullText, shown); if (c) candidates.push(c);
+      }
+    }
+    candidates.sort(function(a,b){ return b.length-a.length; });
+    return candidates.length ? candidates[0] : shown;
+  }
 
   // Selector đã được xác nhận bằng công cụ DOM trên website bệnh viện.
   var tables = Array.prototype.slice.call(document.querySelectorAll('table._st-table_gefxy_208'));
@@ -436,23 +512,8 @@ namespace PatientAppointmentManager
     // 3 Mã BN, 4 Tên BN, 5 Tuổi, 6 Khoa/phòng, 7 Thời gian,
     // 8 Tên dịch vụ, 9 Phòng, 10 KTV, 11 Thứ tự, 12 Thao tác.
     var serviceCell = c.length > 8 ? c[8] : null;
-    var serviceName = at(8);
-    // Ant Design Popover đã có sẵn trong DOM: đọc nội dung theo aria-describedby,
-    // không rê chuột và không chờ tooltip.
-    if (serviceCell) {
-      var serviceSpan = serviceCell.querySelector('span[aria-describedby]');
-      if (serviceSpan) {
-        var describedId = serviceSpan.getAttribute('aria-describedby');
-        var describedNode = describedId ? document.getElementById(describedId) : null;
-        if (describedNode) {
-          var popoverInner = describedNode.querySelector('.ant-popover-inner') ||
-                             (describedNode.classList && describedNode.classList.contains('ant-popover-inner') ? describedNode : null);
-          var fullText = txt(popoverInner || describedNode);
-          fullText = fullText.replace(/^Tên dịch vụ\s*/i, '').trim();
-          if (fullText && fullText.length > serviceName.length) serviceName = fullText;
-        }
-      }
-    }
+    var displayedService = at(8);
+    var serviceName = getFullService(serviceCell, displayedService);
     var item = {
       receiptCode: at(1),
       patientCode: at(3),
@@ -521,7 +582,13 @@ namespace PatientAppointmentManager
                     ShowAppMessage("Đã đọc được bảng nhưng không có dòng nào có đủ Số phiếu và Mã BN. Hãy kiểm tra tiêu đề/cấu trúc hàng trong báo cáo DOM.", "Quét danh sách");
                     return;
                 }
+                int incompleteServices = results.Count(x => string.IsNullOrWhiteSpace(x.ServiceName) ||
+                    x.ServiceName.TrimEnd('.', '…').Length <= 0 || x.ServiceName.EndsWith("...", StringComparison.Ordinal));
                 ShowHospitalScanResults(results);
+                if (incompleteServices > 0)
+                    ShowAppMessage("Đã đọc " + results.Count + " dòng, nhưng có " + incompleteServices +
+                        " dòng chưa lấy được tên dịch vụ đầy đủ. Vui lòng kiểm tra các dòng có dấu ... trước khi tạo lịch.",
+                        "Cảnh báo dữ liệu chỉ định", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
             catch (Exception ex) { ShowAppMessage("Lỗi khi quét danh sách bệnh nhân.\n\n" + ex.Message, "Quét danh sách", MessageBoxButton.OK, MessageBoxImage.Error); }
         }
@@ -985,6 +1052,30 @@ namespace PatientAppointmentManager
                 var text = cell.Content as TextBlock;
                 if (text != null)
                     text.TextDecorations = returned ? TextDecorations.Strikethrough : null;
+                cell.Background = System.Windows.Media.Brushes.Transparent;
+                cell.Foreground = returned ? System.Windows.Media.Brushes.Gray : System.Windows.Media.Brushes.DarkSlateGray;
+                string header = cell.Column == null ? "" : Convert.ToString(cell.Column.Header);
+                if (returned) continue;
+                if (header == "Buổi")
+                {
+                    string shift = Convert.ToString(row["Buổi"]);
+                    cell.Background = shift == "Sáng"
+                        ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 244, 204))
+                        : shift == "Chiều" ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 237, 255)) : System.Windows.Media.Brushes.White;
+                    cell.Foreground = shift == "Sáng"
+                        ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(125, 83, 0))
+                        : new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(28, 83, 145));
+                }
+                else if (header == "Tiêm thuốc cản quang")
+                {
+                    string injection = Convert.ToString(row["Tiêm thuốc cản quang"]);
+                    if (injection == "Có tiêm")
+                    { cell.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(220, 245, 226)); cell.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(24, 112, 55)); }
+                    else if (injection == "Không tiêm")
+                    { cell.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(237, 241, 244)); cell.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(75, 87, 96)); }
+                    else
+                    { cell.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 235, 210)); cell.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(150, 83, 12)); }
+                }
             }
         }
 
@@ -1070,6 +1161,7 @@ namespace PatientAppointmentManager
                     IncludeReturnedCheck.IsChecked == true,
                     injectionFilter);
 
+                ConfigureAppointmentsGrid(visibleData);
                 AppointmentsGrid.ItemsSource = visibleData.DefaultView;
 
                 TotalCountText.Text = totalCount + " ca";
@@ -1116,6 +1208,48 @@ namespace PatientAppointmentManager
                 return "Có tiêm";
 
             return "Chưa xác định";
+        }
+
+        private void ConfigureAppointmentsGrid(DataTable data)
+        {
+            AppointmentsGrid.AutoGenerateColumns = false;
+            AppointmentsGrid.Columns.Clear();
+            AppointmentsGrid.FontSize = 13.5;
+            AppointmentsGrid.RowHeight = 38;
+            AppointmentsGrid.ColumnHeaderHeight = 38;
+            AppointmentsGrid.GridLinesVisibility = DataGridGridLinesVisibility.Horizontal;
+            AppointmentsGrid.HorizontalGridLinesBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(225, 233, 236));
+            AppointmentsGrid.VerticalGridLinesBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(238, 242, 244));
+            AppointmentsGrid.RowBackground = System.Windows.Media.Brushes.White;
+            AppointmentsGrid.AlternatingRowBackground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 251, 252));
+
+            string[] order = { "Id", "Mã BN", "Tên bệnh nhân", "Khoa phòng", "Mã chỉ định", "Dịch vụ", "Tiêm thuốc cản quang", "Ngày hẹn", "Buổi", "Trạng thái", "Ngày tạo lịch" };
+            foreach (string name in order)
+            {
+                if (!data.Columns.Contains(name)) continue;
+                double width = 110;
+                if (name == "Id") width = 55;
+                else if (name == "Mã BN") width = 125;
+                else if (name == "Tên bệnh nhân") width = 165;
+                else if (name == "Khoa phòng") width = 190;
+                else if (name == "Mã chỉ định") width = 115;
+                else if (name == "Dịch vụ") width = 280;
+                else if (name == "Tiêm thuốc cản quang") width = 145;
+                else if (name == "Ngày hẹn") width = 105;
+                else if (name == "Buổi") width = 85;
+                else if (name == "Trạng thái") width = 105;
+                else if (name == "Ngày tạo lịch") width = 155;
+
+                var textStyle = new Style(typeof(TextBlock));
+                textStyle.Setters.Add(new Setter(TextBlock.FontSizeProperty, 13.5));
+                textStyle.Setters.Add(new Setter(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center));
+                textStyle.Setters.Add(new Setter(TextBlock.TextTrimmingProperty, TextTrimming.CharacterEllipsis));
+                textStyle.Setters.Add(new Setter(TextBlock.MarginProperty, new Thickness(5, 0, 5, 0)));
+                textStyle.Setters.Add(new Setter(TextBlock.TextAlignmentProperty,
+                    name == "Tên bệnh nhân" || name == "Khoa phòng" || name == "Dịch vụ" ? TextAlignment.Left : TextAlignment.Center));
+                var column = new DataGridTextColumn { Header = name, Binding = new System.Windows.Data.Binding { Path = new PropertyPath("[" + name + "]") }, Width = new DataGridLength(width), ElementStyle = textStyle };
+                AppointmentsGrid.Columns.Add(column);
+            }
         }
 
         private void ResetAppointmentCounters()

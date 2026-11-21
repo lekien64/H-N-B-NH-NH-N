@@ -351,13 +351,13 @@
 
     <DataGrid x:Name="AppointmentsGrid" LoadingRow="AppointmentsGrid_LoadingRow"
               Grid.Row="3"
-              AutoGenerateColumns="True"
+              AutoGenerateColumns="False"
               IsReadOnly="True"
               CanUserAddRows="False"
               Background="White"
               BorderBrush="#DCE5E8"
               HeadersVisibility="Column"
-              RowHeight="34"/>
+              RowHeight="38" FontSize="13.5"/>
 
     <StackPanel Grid.Row="4"
                 Orientation="Horizontal"
