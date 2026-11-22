@@ -1,0 +1,24 @@
+SOHENCT LITE v0.5.18 - WINDOWS 7 x64
+
+Muc tieu
+- Goi dong goi gon hon, giu nguyen ma nguon va toan bo logic nghiep vu v0.5.18.
+- Giu CefSharp 109.1.110 va tat ca tep runtime can thiet.
+- Chi loai bo tep debug/tai lieu va cac goi ngon ngu phu.
+
+Cach build
+1. Dua toan bo ma nguon vao nhanh GitHub dang dung.
+2. Vao Actions, chon workflow Build SoHenCT Lite for Windows 7 x64.
+3. Chon Run workflow.
+4. Tai artifact SoHenCT-v0.5.18-Lite-Win7-x64 khi build thanh cong.
+
+Yeu cau may dich
+- Windows 7 SP1 x64.
+- .NET Framework 4.8.
+- Microsoft Visual C++ 2019 Redistributable x64.
+- Khong can cai Visual Studio tren may chay.
+
+Luu y
+- Lite chi toi uu dong goi, khong bo trinh duyet va khong thay doi co che/logic.
+- CefSharp 109 la nhanh Chromium cuoi ho tro Windows 7. Trinh duyet nay da cu va co rui ro bao mat; chi nen dung tren mang noi bo tin cay.
+- Workflow se bao loi neu thieu tep runtime quan trong, khong tao goi thieu DLL.
+- ZIP nay chua co EXE build san; GitHub Actions tao artifact sau khi chay workflow.
