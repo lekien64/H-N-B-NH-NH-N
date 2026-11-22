@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Data;
 using System.ComponentModel;
 using System.Text;
@@ -606,22 +606,59 @@ namespace PatientAppointmentManager
         private void ShowDuplicateNotice(HospitalScanRow row, Appointment saved)
         {
             bool active = saved.Status == "Đã hẹn";
-            string message = "Phần mềm phát hiện bệnh nhân đã có dữ liệu lịch hẹn trùng theo Mã BN + Số phiếu.\n\n" +
-                "Bệnh nhân: " + (row.PatientName ?? "") + "\n" +
-                "Mã BN: " + row.PatientCode + "\n" +
-                "Số phiếu / Mã chỉ định: " + row.ReceiptCode + "\n" +
-                "Ngày hẹn đã lưu: " + saved.AppointmentDate.ToString("dd/MM/yyyy") + "\n" +
-                "Buổi: " + saved.Shift + "\n\n" +
-                (active ? "Bạn có muốn đổi lịch hẹn này ngay không?" : "Lịch cũ đã trả hẹn. Bạn có muốn tạo lịch hẹn mới không?");
-            var answer = ShowAppMessage(message, "Phát hiện bệnh nhân đã có lịch",
-                MessageBoxButton.YesNo, MessageBoxImage.Warning);
-            if (answer != MessageBoxResult.Yes) return;
+            var dialog = new Window
+            {
+                Title = "Phát hiện bệnh nhân đã có lịch",
+                Width = 470, SizeToContent = SizeToContent.Height,
+                ResizeMode = ResizeMode.NoResize, Owner = this,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Background = System.Windows.Media.Brushes.White
+            };
+            var panel = new StackPanel { Margin = new Thickness(22) };
+            panel.Children.Add(new TextBlock { Text = "Phát hiện bệnh nhân đã có lịch", FontSize = 18, FontWeight = FontWeights.Bold, Margin = new Thickness(0,0,0,12) });
+            panel.Children.Add(new TextBlock {
+                Text = "Phần mềm phát hiện bệnh nhân đã có dữ liệu lịch hẹn trùng theo Mã BN + Số phiếu.\\n\\n" +
+                    "Bệnh nhân: " + (row.PatientName ?? "") + "\\nMã BN: " + row.PatientCode +
+                    "\\nSố phiếu / Mã chỉ định: " + row.ReceiptCode +
+                    "\\nNgày hẹn đã lưu: " + saved.AppointmentDate.ToString("dd/MM/yyyy") +
+                    "\\nBuổi: " + saved.Shift,
+                TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0,0,0,18)
+            });
+            var actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+            var returnButton = new Button { Content = "Trả hẹn", MinWidth = 105, Height = 40, Margin = new Thickness(0,0,8,0) };
+            var changeButton = new Button { Content = "Đổi lịch", MinWidth = 105, Height = 40, Margin = new Thickness(0,0,8,0) };
+            var closeButton = new Button { Content = "Đóng", MinWidth = 90, Height = 40 };
+            returnButton.IsEnabled = active;
+            changeButton.IsEnabled = active;
+            returnButton.Click += (s,e) => {
+                if (!active) return;
+                if (ShowAppMessage(dialog, "Xác nhận trả lịch hẹn của " + row.PatientName + "? Dữ liệu sẽ được giữ lại.", "Xác nhận trả hẹn", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+                try { Database.Return(saved.Id); LoadAppointments(); dialog.Close(); }
+                catch (Exception ex) { ShowAppMessage(dialog, "Không thể trả hẹn: " + ex.Message); }
+            };
+            changeButton.Click += (s,e) => {
+                if (active && ChangeAppointmentFromScan(row, dialog)) { LoadAppointments(); dialog.Close(); }
+            };
+            closeButton.Click += (s,e) => dialog.Close();
+            actions.Children.Add(returnButton); actions.Children.Add(changeButton); actions.Children.Add(closeButton);
+            panel.Children.Add(actions); dialog.Content = panel; dialog.ShowDialog();
+        }
 
-            bool updated = active
-                ? ChangeAppointmentFromScan(row, this)
-                : CreateAppointmentFromScan(row, this);
-            if (updated)
-                LoadAppointments();
+        private void ShowTemporarySuccess(string message, Window owner)
+        {
+            var toast = new Window {
+                Title = "Thông báo", Width = 360, Height = 105,
+                ResizeMode = ResizeMode.NoResize, WindowStyle = WindowStyle.ToolWindow,
+                Owner = owner, WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                ShowInTaskbar = false, Topmost = true
+            };
+            toast.Content = new TextBlock { Text = message, TextWrapping = TextWrapping.Wrap,
+                VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center,
+                Margin = new Thickness(18), FontSize = 14 };
+            toast.Show();
+            var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            timer.Tick += (s,e) => { timer.Stop(); toast.Close(); };
+            timer.Start();
         }
 
         private async void ScanHospitalList_Click(object sender, RoutedEventArgs e)
@@ -734,11 +771,12 @@ namespace PatientAppointmentManager
             grid.Columns.Add(serviceColumn);
             grid.Columns.Add(new DataGridTextColumn { Header="Lịch đã lưu", Binding=new System.Windows.Data.Binding("ExistingAppointmentDate"), Width=95 });
             grid.Columns.Add(new DataGridTextColumn { Header="Buổi", Binding=new System.Windows.Data.Binding("ExistingShift"), Width=65 });
+            if (rows.Count == 1) grid.SelectedIndex = 0;
 
             var buttons = new StackPanel { Orientation=Orientation.Horizontal, HorizontalAlignment=HorizontalAlignment.Right, Margin=new Thickness(0,10,0,0) };
             var returnButton = new Button { Content="Trả hẹn lịch cũ", MinWidth=135, Height=42, Padding=new Thickness(12,8,12,8), Margin=new Thickness(0,0,8,0) };
             returnButton.Click += (s,e) => {
-                var selected=grid.SelectedItem as HospitalScanRow;
+                var selected=grid.SelectedItem as HospitalScanRow ?? (rows.Count == 1 ? rows[0] : null);
                 if (selected==null || selected.ExistingAppointmentId<=0) { ShowAppMessage(window,"Chọn một dòng đang có lịch hẹn trước."); return; }
                 if (ShowAppMessage(window,"Xác nhận trả lịch cũ của bệnh nhân " + selected.PatientName + "? Dữ liệu sẽ được giữ lại, không bị xóa.","Xác nhận trả hẹn",MessageBoxButton.YesNo,MessageBoxImage.Question)!=MessageBoxResult.Yes) return;
                 try { Database.Return(selected.ExistingAppointmentId); selected.Status="ĐÃ TRẢ HẸN"; selected.ExistingAppointmentId=0; selected.ExistingAppointmentDate=""; selected.ExistingShift=""; grid.Items.Refresh(); LoadAppointments(); ShowAppMessage(window,"Đã đánh dấu trả hẹn lịch cũ."); }
@@ -746,7 +784,7 @@ namespace PatientAppointmentManager
             };
             var changeButton = new Button { Content="Đổi lịch", MinWidth=100, Height=42, Padding=new Thickness(12,8,12,8), Margin=new Thickness(0,0,8,0) };
             changeButton.Click += (s,e) => {
-                var selected=grid.SelectedItem as HospitalScanRow;
+                var selected=grid.SelectedItem as HospitalScanRow ?? (rows.Count == 1 ? rows[0] : null);
                 if(selected==null || selected.ExistingAppointmentId<=0 || selected.Status=="ĐÃ TRẢ HẸN") { ShowAppMessage(window,"Chỉ bệnh nhân đang có lịch hẹn mới được đổi lịch."); return; }
                 if (ChangeAppointmentFromScan(selected, window)) {
                     // Đọc lại lịch vừa cập nhật để hiển thị ngày/buổi mới trong bảng quét.
@@ -757,10 +795,17 @@ namespace PatientAppointmentManager
             };
             var createButton = new Button { Content="Tạo lịch hẹn", MinWidth=115, Height=42, Padding=new Thickness(12,8,12,8), Margin=new Thickness(0,0,8,0) };
             createButton.Click += (s,e) => {
-                var selected=grid.SelectedItem as HospitalScanRow;
+                var selected=grid.SelectedItem as HospitalScanRow ?? (rows.Count == 1 ? rows[0] : null);
                 if(selected==null){ShowAppMessage(window,"Hãy chọn một bệnh nhân.");return;}
                 if(selected.ExistingAppointmentId>0 && selected.Status!="ĐÃ TRẢ HẸN"){ShowAppMessage(window,"Bệnh nhân đang có lịch hẹn. Hãy dùng nút Đổi lịch hoặc Trả hẹn lịch cũ.");return;}
-                if (CreateAppointmentFromScan(selected, window)) { selected.Status="ĐÃ CÓ LỊCH"; var match=Database.FindActiveAppointment(selected.PatientCode,selected.ReceiptCode); if(match!=null){selected.ExistingAppointmentId=match.Id;selected.ExistingAppointmentDate=match.AppointmentDate.ToString("dd/MM/yyyy");selected.ExistingShift=match.Shift;} grid.Items.Refresh(); LoadAppointments(); }
+                if (CreateAppointmentFromScan(selected, window)) {
+                    selected.Status="ĐÃ CÓ LỊCH";
+                    var match=Database.FindActiveAppointment(selected.PatientCode,selected.ReceiptCode);
+                    if(match!=null){selected.ExistingAppointmentId=match.Id;selected.ExistingAppointmentDate=match.AppointmentDate.ToString("dd/MM/yyyy");selected.ExistingShift=match.Shift;}
+                    grid.Items.Refresh(); LoadAppointments();
+                    ShowTemporarySuccess("Đã tạo lịch hẹn cho " + selected.PatientName + ".", this);
+                    window.Close();
+                }
             };
             var closeButton = new Button { Content="Đóng", MinWidth=90, Height=42, Padding=new Thickness(12,8,12,8) }; closeButton.Click += (s,e)=>window.Close();
             buttons.Children.Add(returnButton); buttons.Children.Add(changeButton); buttons.Children.Add(createButton); buttons.Children.Add(closeButton);
@@ -825,7 +870,6 @@ namespace PatientAppointmentManager
             var date = new DatePicker { SelectedDate=DateTime.Today.AddDays(1), Height=36, Margin=new Thickness(0,0,0,14) };
             var shift = new ComboBox { Height=36, SelectedIndex=0, Margin=new Thickness(0,0,0,14) }; shift.Items.Add("Sáng"); shift.Items.Add("Chiều");
             bool result=ShowScheduleDialog(row,owner,date,shift,false);
-            if(result) ShowAppMessage(owner,"Đã tạo lịch hẹn cho " + row.PatientName + ".");
             return result;
         }
 
