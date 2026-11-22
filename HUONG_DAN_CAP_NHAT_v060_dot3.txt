@@ -23,3 +23,11 @@ BUILD
 - GitHub Actions không yêu cầu chứng chỉ ký số hoặc GitHub Secrets.
 - Tên file chạy: SoHenBN.exe.
 - Chưa xác nhận build thực tế trong môi trường tạo mã nguồn; cần chạy GitHub Actions và thử trên Windows 7/10/11.
+
+
+DOT 3 - FIX GITHUB ACTIONS OUTPUT
+- GitHub Actions ghi output build vao artifacts/app thay vi obj.
+- Buoc dong goi kiem tra SoHenBN.exe tai dung thu muc artifacts/app.
+- Artifact: SoHenBN-v0.6.0-WindowsClassic-Win64.
+- Khong can chung chi ky so, PFX hoac GitHub Secrets.
+- Chi workflow trong .github/workflows/build-windows.yml la workflow chay tu GitHub Actions.
