@@ -1,0 +1,94 @@
+
+name: Build SoHenCT Lite Windows 7 x64
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - lite-win7
+    paths:
+      - '**.cs'
+      - '**.xaml'
+      - '**.csproj'
+      - '.github/workflows/build-lite-win7.yml'
+
+jobs:
+  build-lite:
+    name: Build SoHenCT Lite x64
+    runs-on: windows-2022
+
+    steps:
+      - name: Checkout Lite source
+        uses: actions/checkout@v4
+        with:
+          ref: lite-win7
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Restore and build WPF application
+        shell: pwsh
+        run: |
+          msbuild PatientAppointmentManager.csproj /restore /p:Configuration=Release /p:Platform="Any CPU" /p:PlatformTarget=x64 /p:Prefer32Bit=false
+
+      - name: Collect Lite build files
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path $env:GITHUB_WORKSPACE -Recurse -File -Filter "PatientAppointmentManager.exe" |
+            Where-Object { $_.FullName -notmatch '[\\/](obj|\.git|publish-lite)[\\/]' } |
+            Select-Object -First 1
+
+          if (-not $exe) {
+            throw "PatientAppointmentManager.exe was not found."
+          }
+
+          $publish = Join-Path $env:GITHUB_WORKSPACE "publish-lite"
+          New-Item -ItemType Directory -Force -Path $publish | Out-Null
+
+          Copy-Item -Path (Join-Path $exe.DirectoryName '*') -Destination $publish -Recurse -Force
+
+          # Remove debug and documentation files only.
+          # Keep all CefSharp, Chromium, SQLite and native runtime files.
+          Get-ChildItem $publish -Recurse -File -Include *.pdb,*.xml,*.ilk,*.exp,*.lib,*.map |
+            Remove-Item -Force -ErrorAction SilentlyContinue
+
+          # Verify essential runtime files.
+          $required = @(
+            "PatientAppointmentManager.exe",
+            "CefSharp.dll",
+            "CefSharp.Wpf.dll",
+            "CefSharp.Core.dll",
+            "CefSharp.Core.Runtime.dll",
+            "CefSharp.BrowserSubprocess.exe",
+            "libcef.dll",
+            "icudtl.dat",
+            "chrome_elf.dll",
+            "v8_context_snapshot.bin",
+            "resources.pak",
+            "d3dcompiler_47.dll"
+          )
+
+          foreach ($file in $required) {
+            if (-not (Test-Path (Join-Path $publish $file))) {
+              throw "Required runtime file missing: $file"
+            }
+          }
+
+          $bytes = (Get-ChildItem $publish -Recurse -File | Measure-Object Length -Sum).Sum
+
+          Write-Host "Lite package size: $bytes bytes"
+          Write-Host "Build files:"
+          Get-ChildItem $publish -Recurse -File | Select-Object FullName
+
+      - name: Create Lite ZIP
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "publish-lite\*" -DestinationPath "SoHenCT-v0.5.18-Lite-Win7-x64.zip" -Force
+
+      - name: Upload Lite artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SoHenCT-v0.5.18-Lite-Win7-x64
+          path: SoHenCT-v0.5.18-Lite-Win7-x64.zip
+          if-no-files-found: error
+          retention-days: 30
