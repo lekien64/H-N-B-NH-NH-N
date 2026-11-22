@@ -32,6 +32,7 @@ namespace PatientAppointmentManager
             FromDatePicker.SelectedDate = DateTime.Today;
             ToDatePicker.SelectedDate = DateTime.Today;
 
+            ConfigureBrowserTab(FirstBrowserTab, AddHospitalBrowser, "Trang 1");
             RegisterBrowser(AddHospitalBrowser);
             LoadBrowserHistory(AddUrlBox);
         }
@@ -75,6 +76,10 @@ namespace PatientAppointmentManager
 
         private void RegisterBrowser(ChromiumWebBrowser browser)
         {
+            browser.LifeSpanHandler = new TabLifeSpanHandler(targetUrl =>
+            {
+                Dispatcher.BeginInvoke(new Action(() => CreateBrowserTab(targetUrl)));
+            });
             browser.FrameLoadEnd += (sender, args) =>
             {
                 if (!args.Frame.IsMain) return;
@@ -85,6 +90,34 @@ namespace PatientAppointmentManager
                     SaveVisitedAddress(args.Url, AddUrlBox);
                 }));
             };
+        }
+
+        private void ConfigureBrowserTab(TabItem tab, ChromiumWebBrowser browser, string title)
+        {
+            var header = new StackPanel { Orientation = Orientation.Horizontal };
+            header.Children.Add(new TextBlock { Text = title, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 7, 0) });
+            var close = new Button { Content = "×", Width = 20, Height = 20, Padding = new Thickness(0), FontSize = 13, ToolTip = "Đóng tab" };
+            close.Click += (s, e) => CloseBrowserTab(tab, browser);
+            header.Children.Add(close);
+            tab.Header = header;
+        }
+
+        private void CloseBrowserTab(TabItem tab, ChromiumWebBrowser browser)
+        {
+            if (BrowserTabsControl.Items.Count <= 1) return;
+            BrowserTabsControl.Items.Remove(tab);
+            if (browser != null) browser.Dispose();
+        }
+
+        private void CreateBrowserTab(string address)
+        {
+            var browser = new ChromiumWebBrowser { Address = string.IsNullOrWhiteSpace(address) ? "about:blank" : address };
+            RegisterBrowser(browser);
+            var tab = new TabItem { Content = browser };
+            ConfigureBrowserTab(tab, browser, "Trang " + (BrowserTabsControl.Items.Count + 1));
+            BrowserTabsControl.Items.Add(tab);
+            BrowserTabsControl.SelectedItem = tab;
+            AddUrlBox.Text = browser.Address ?? string.Empty;
         }
 
         private void LoadBrowserHistory(ComboBox box)
@@ -121,22 +154,7 @@ namespace PatientAppointmentManager
 
         private void NewBrowserTab_Click(object sender, RoutedEventArgs e)
         {
-            var browser = new ChromiumWebBrowser { Address = "about:blank" };
-            RegisterBrowser(browser);
-            var header = new StackPanel { Orientation = Orientation.Horizontal };
-            header.Children.Add(new TextBlock { Text = "Trang " + (BrowserTabsControl.Items.Count + 1), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) });
-            var close = new Button { Content = "×", Width = 22, Height = 22, Padding = new Thickness(0), ToolTip = "Đóng tab" };
-            var tab = new TabItem { Content = browser, Header = header };
-            close.Click += (s, args) =>
-            {
-                if (BrowserTabsControl.Items.Count <= 1) return;
-                BrowserTabsControl.Items.Remove(tab);
-                if (browser.IsBrowserInitialized) browser.Dispose();
-            };
-            header.Children.Add(close);
-            BrowserTabsControl.Items.Add(tab);
-            BrowserTabsControl.SelectedItem = tab;
-            AddUrlBox.Text = string.Empty;
+            CreateBrowserTab("about:blank");
             AddUrlBox.Focus();
         }
 
@@ -1437,6 +1455,14 @@ namespace PatientAppointmentManager
             LoadAppointments();
         }
 
+        private void AdjustAppointmentDate(int days)
+        {
+            AppointmentDatePicker.SelectedDate = (AppointmentDatePicker.SelectedDate ?? DateTime.Today).AddDays(days);
+        }
+
+        private void AppointmentDateMinus_Click(object sender, RoutedEventArgs e) { AdjustAppointmentDate(-1); }
+        private void AppointmentDatePlus_Click(object sender, RoutedEventArgs e) { AdjustAppointmentDate(1); }
+
         private void AdjustFilterDate(DatePicker picker, int days, bool isFrom)
         {
             DateTime current = picker.SelectedDate ?? DateTime.Today;
@@ -1540,4 +1566,31 @@ namespace PatientAppointmentManager
         }
 
     }
+
+    // Chặn cửa sổ popup của Chromium và mở URL đích trong tab tích hợp.
+    internal sealed class TabLifeSpanHandler : ILifeSpanHandler
+    {
+        private readonly Action<string> openInTab;
+
+        public TabLifeSpanHandler(Action<string> openInTab)
+        {
+            this.openInTab = openInTab;
+        }
+
+        public bool OnBeforePopup(IWebBrowser chromiumWebBrowser, IBrowser browser, IFrame frame,
+            string targetUrl, string targetFrameName, WindowOpenDisposition targetDisposition,
+            bool userGesture, IPopupFeatures popupFeatures, IWindowInfo windowInfo,
+            IBrowserSettings browserSettings, ref bool noJavascriptAccess, out IWebBrowser newBrowser)
+        {
+            newBrowser = null;
+            if (!string.IsNullOrWhiteSpace(targetUrl))
+                openInTab(targetUrl);
+            return true;
+        }
+
+        public void OnAfterCreated(IWebBrowser chromiumWebBrowser, IBrowser browser) { }
+        public bool DoClose(IWebBrowser chromiumWebBrowser, IBrowser browser) { return false; }
+        public void OnBeforeClose(IWebBrowser chromiumWebBrowser, IBrowser browser) { }
+    }
+
 }

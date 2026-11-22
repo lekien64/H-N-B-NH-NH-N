@@ -105,7 +105,7 @@
              ClipToBounds="True">
       <Grid>
        <TabControl x:Name="BrowserTabsControl" Margin="0,0,44,0" SelectionChanged="BrowserTabsControl_SelectionChanged">
-        <TabItem Header="Trang 1">
+        <TabItem x:Name="FirstBrowserTab">
          <cef:ChromiumWebBrowser x:Name="AddHospitalBrowser" Address="about:blank"/>
         </TabItem>
        </TabControl>
@@ -168,7 +168,13 @@
 
         <StackPanel Margin="0,0,0,10">
          <TextBlock Text="Ngày hẹn"/>
+         <DockPanel LastChildFill="True">
+         <Button Content="−" Width="30" Height="34" Margin="0,0,5,0" Padding="0"
+                 ToolTip="Lùi một ngày" Click="AppointmentDateMinus_Click"/>
+         <Button Content="+" Width="30" Height="34" Margin="5,0,0,0" Padding="0"
+                 ToolTip="Tiến một ngày" DockPanel.Dock="Right" Click="AppointmentDatePlus_Click"/>
          <DatePicker x:Name="AppointmentDatePicker" Height="34"/>
+        </DockPanel>
         </StackPanel>
        </UniformGrid>
 
