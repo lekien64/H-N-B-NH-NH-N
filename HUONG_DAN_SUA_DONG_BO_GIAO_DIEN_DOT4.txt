@@ -1,0 +1,13 @@
+SoHenBN Full 0.6.0 - Dot 4: Fix đồng bộ giao diện
+
+Các lỗi xử lý:
+1. Vùng Nhập lịch thủ công dùng Expander nên nội dung con chỉ được tạo khi mở. Đã bổ sung sự kiện Expanded để chụp giao diện gốc trước khi áp dụng chế độ tối giản.
+2. SettingsView/ScrollViewer có thể tạo visual tree khi người dùng mở trang. Đã bổ sung áp dụng giao diện sau khi chuyển trang và chụp các phần tử mới trước khi làm phẳng.
+3. Bộ chụp giao diện dùng HashSet theo từng DependencyObject, tránh bỏ sót phần tử được tạo muộn và tránh lưu snapshot trùng.
+4. Ba nút điều hướng dùng cùng kích thước/font/căn giữa; chế độ tối giản không ghi đè style căn giữa riêng của thanh điều hướng.
+5. Không đổi nội dung biểu tượng trình duyệt thành chữ WEB khi ở chế độ tối giản.
+
+Không thay đổi nghiệp vụ đặt lịch, cấu trúc SQLite, chức năng trình duyệt hoặc quy trình build.
+
+Kiểm tra đã thực hiện: XML XAML parse thành công; số lượng dấu ngoặc nhọn C# cân bằng; tên event handler có phương thức tương ứng.
+Chưa có MSBuild trong môi trường chỉnh sửa nên chưa xác nhận biên dịch thực tế. Cần chạy GitHub Actions và thử cả hai chế độ trên máy Windows.

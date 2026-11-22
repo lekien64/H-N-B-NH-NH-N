@@ -64,9 +64,9 @@
       </ControlTemplate></Setter.Value></Setter>
      </Style>
     </StackPanel.Resources>
-    <Button x:Name="AddNavButton" Content="🌐" ToolTip="Trình duyệt và quét danh sách" Click="AddTab_Click" Style="{StaticResource SidebarIconButton}"/>
-    <Button x:Name="ListNavButton" Content="▦" ToolTip="Lịch đã hẹn" Click="ListTab_Click" Style="{StaticResource SidebarIconButton}" FontSize="32"/>
-    <Button x:Name="SettingsNavButton" Content="⚙" ToolTip="Cài đặt" Click="SettingsTab_Click" Style="{StaticResource SidebarIconButton}" FontSize="27"/>
+    <Button x:Name="AddNavButton" Content="🌐" ToolTip="Trình duyệt và quét danh sách" Click="AddTab_Click" Style="{StaticResource SidebarIconButton}" FontSize="26" FontFamily="Segoe UI Symbol" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
+    <Button x:Name="ListNavButton" Content="▦" ToolTip="Lịch đã hẹn" Click="ListTab_Click" Style="{StaticResource SidebarIconButton}" FontSize="26" FontFamily="Segoe UI Symbol" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
+    <Button x:Name="SettingsNavButton" Content="⚙" ToolTip="Cài đặt" Click="SettingsTab_Click" Style="{StaticResource SidebarIconButton}" FontSize="26" FontFamily="Segoe UI Symbol" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
    </StackPanel>
   </Border>
 
@@ -146,6 +146,7 @@
     <Expander Grid.Row="2"
               Header="Nhập thủ công (mở khi cần)"
               IsExpanded="False"
+              Expanded="ManualEntryExpander_Expanded"
               Margin="0,10,0,0"
               Background="#F8FCFC"
               Padding="10">

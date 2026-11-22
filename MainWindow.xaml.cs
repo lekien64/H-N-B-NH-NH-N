@@ -61,8 +61,8 @@ namespace PatientAppointmentManager
 
         private string CurrentPerformanceMode = "minimal";
         private readonly List<Action> _fullAppearanceRestorers = new List<Action>();
+        private readonly HashSet<DependencyObject> _capturedAppearanceNodes = new HashSet<DependencyObject>();
         private readonly Dictionary<DataGridColumn, Style> _fullGridHeaderStyles = new Dictionary<DataGridColumn, Style>();
-        private bool _appearanceSnapshotCaptured;
 
         private void LoadAppSettings()
         {
@@ -124,13 +124,15 @@ namespace PatientAppointmentManager
 
         private void CaptureFullAppearance()
         {
-            if (_appearanceSnapshotCaptured) return;
-            _appearanceSnapshotCaptured = true;
+            // Capture cả các vùng vừa được tạo khi người dùng mở trang/Expander.
+            // HashSet ngăn lưu trùng và luôn giữ lại trạng thái giao diện gốc trước khi làm phẳng.
             CaptureAppearanceRecursive(this);
         }
 
         private void CaptureAppearanceRecursive(DependencyObject node)
         {
+            if (node == null || !_capturedAppearanceNodes.Add(node)) return;
+
             var border = node as Border;
             if (border != null)
             {
@@ -198,7 +200,9 @@ namespace PatientAppointmentManager
             var button = node as Button;
             if (button != null)
             {
-                button.Style = (Style)FindResource("ClassicButtonStyle");
+                bool isSidebarButton = button == AddNavButton || button == ListNavButton || button == SettingsNavButton;
+                if (!isSidebarButton)
+                    button.Style = (Style)FindResource("ClassicButtonStyle");
                 button.Background = new SolidColorBrush(Color.FromRgb(230, 230, 230));
                 button.Foreground = Brushes.Black;
                 button.BorderBrush = new SolidColorBrush(Color.FromRgb(128, 128, 128));
@@ -258,7 +262,6 @@ namespace PatientAppointmentManager
                 if (Sidebar != null) Sidebar.Background = new SolidColorBrush(Color.FromRgb(224, 224, 224));
                 if (MainContentPanel != null) MainContentPanel.Background = new SolidColorBrush(Color.FromRgb(240, 240, 240));
                 ApplyMinimalAppearanceRecursive(this, false);
-                if (AddNavButton != null) AddNavButton.Content = "WEB";
                 ApplyMinimalDataGridStyle();
                 UpdateSidebarSelection(GetCurrentViewName());
             }
@@ -276,7 +279,6 @@ namespace PatientAppointmentManager
                     AppointmentsGrid.VerticalGridLinesBrush = new SolidColorBrush(Color.FromRgb(238, 242, 244));
                 }
                 Background = new SolidColorBrush(Color.FromRgb(234, 243, 244));
-                if (AddNavButton != null) AddNavButton.Content = "🌐";
                 UpdateSidebarSelection(GetCurrentViewName());
             }
         }
@@ -469,8 +471,33 @@ namespace PatientAppointmentManager
             SettingsView.Visibility = name == "settings" ? Visibility.Visible : Visibility.Collapsed;
 
             UpdateSidebarSelection(name);
-            if (name == "list")
-                LoadAppointments();
+            if (name == "list") LoadAppointments();
+
+            // Một số vùng (đặc biệt SettingsView/ScrollViewer) chỉ tạo visual tree khi được mở.
+            // Chụp trạng thái gốc của các phần tử mới trước khi áp dụng giao diện tối giản.
+            Grid activeView = name == "settings" ? SettingsView : (name == "list" ? ListView : AddView);
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                CaptureAppearanceRecursive(activeView);
+                if (CurrentPerformanceMode == "minimal")
+                {
+                    ApplyMinimalAppearanceRecursive(activeView, false);
+                    if (name == "list") ApplyMinimalDataGridStyle();
+                    UpdateSidebarSelection(name);
+                }
+            }), DispatcherPriority.Loaded);
+        }
+
+        private void ManualEntryExpander_Expanded(object sender, RoutedEventArgs e)
+        {
+            var expander = sender as Expander;
+            if (expander == null) return;
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                CaptureAppearanceRecursive(expander);
+                if (CurrentPerformanceMode == "minimal")
+                    ApplyMinimalAppearanceRecursive(expander, false);
+            }), DispatcherPriority.Loaded);
         }
 
         private void UpdateSidebarSelection(string selected)
@@ -490,7 +517,7 @@ namespace PatientAppointmentManager
                 button.BorderBrush = new SolidColorBrush(Color.FromRgb(128, 128, 128));
                 button.BorderThickness = new Thickness(1);
                 button.Foreground = Brushes.Black;
-                button.Style = (Style)FindResource("ClassicButtonStyle");
+                // Giữ nguyên style căn giữa riêng của ba nút điều hướng.
                 return;
             }
             button.Background = selected
