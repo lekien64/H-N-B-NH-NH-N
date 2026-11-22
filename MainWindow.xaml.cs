@@ -15,6 +15,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Threading;
+using System.Windows.Media;
 using CefSharp;
 using CefSharp.Wpf;
 using PatientAppointmentManager.Data;
@@ -56,12 +57,14 @@ namespace PatientAppointmentManager
             }
         }
 
-        private string CurrentPerformanceMode = "low";
+        private string CurrentPerformanceMode = "minimal";
+        private readonly List<Action> _fullAppearanceRestorers = new List<Action>();
+        private bool _appearanceSnapshotCaptured;
 
         private void LoadAppSettings()
         {
             bool createDefaultSettings = !File.Exists(SettingsFilePath);
-            CurrentPerformanceMode = "low"; // Mặc định khi cài đặt/chạy lần đầu.
+            CurrentPerformanceMode = "minimal"; // Mặc định giao diện tối giản khi cài mới.
 
             try
             {
@@ -73,8 +76,10 @@ namespace PatientAppointmentManager
                     if (values != null && values.ContainsKey("PerformanceMode"))
                     {
                         string savedMode = (values["PerformanceMode"] ?? "").Trim().ToLowerInvariant();
-                        if (savedMode == "high" || savedMode == "balanced" || savedMode == "low")
+                        if (savedMode == "full" || savedMode == "minimal")
                             CurrentPerformanceMode = savedMode;
+                        else if (savedMode == "low") CurrentPerformanceMode = "minimal";
+                        else if (savedMode == "high" || savedMode == "balanced") CurrentPerformanceMode = "full";
                         else
                             createDefaultSettings = true;
                     }
@@ -86,8 +91,8 @@ namespace PatientAppointmentManager
             }
             catch
             {
-                // Tệp cấu hình lỗi/không đọc được: quay về cấu hình thấp an toàn.
-                CurrentPerformanceMode = "low";
+                // Tệp cấu hình lỗi/không đọc được: quay về giao diện tối giản.
+                CurrentPerformanceMode = "minimal";
                 createDefaultSettings = true;
             }
 
@@ -96,8 +101,7 @@ namespace PatientAppointmentManager
 
             if (PerformanceModeBox != null)
                 PerformanceModeBox.SelectedIndex =
-                    CurrentPerformanceMode == "high" ? 0 :
-                    CurrentPerformanceMode == "balanced" ? 1 : 2;
+                    CurrentPerformanceMode == "full" ? 0 : 1;
 
             // Áp dụng trước khi cửa sổ chính được hiển thị.
             ApplyPerformanceMode(CurrentPerformanceMode);
@@ -111,51 +115,107 @@ namespace PatientAppointmentManager
                 new JavaScriptSerializer().Serialize(values), Encoding.UTF8);
         }
 
+        private void CaptureFullAppearance()
+        {
+            if (_appearanceSnapshotCaptured) return;
+            _appearanceSnapshotCaptured = true;
+            CaptureAppearanceRecursive(this);
+        }
+
+        private void CaptureAppearanceRecursive(DependencyObject node)
+        {
+            var border = node as Border;
+            if (border != null)
+            {
+                CornerRadius radius = border.CornerRadius;
+                Brush background = border.Background;
+                Effect effect = border.Effect;
+                _fullAppearanceRestorers.Add(() => { border.CornerRadius = radius; border.Background = background; border.Effect = effect; });
+            }
+            var control = node as Control;
+            if (control != null)
+            {
+                Brush background = control.Background;
+                _fullAppearanceRestorers.Add(() => control.Background = background);
+            }
+            var panel = node as Panel;
+            if (panel != null)
+            {
+                Brush background = panel.Background;
+                _fullAppearanceRestorers.Add(() => panel.Background = background);
+            }
+
+            int count = VisualTreeHelper.GetChildrenCount(node);
+            for (int i = 0; i < count; i++) CaptureAppearanceRecursive(VisualTreeHelper.GetChild(node, i));
+        }
+
+        private Brush FlattenBrush(Brush brush)
+        {
+            var gradient = brush as GradientBrush;
+            if (gradient != null && gradient.GradientStops.Count > 0)
+                return new SolidColorBrush(gradient.GradientStops[0].Color);
+            return brush;
+        }
+
+        private void ApplyMinimalAppearanceRecursive(DependencyObject node)
+        {
+            var border = node as Border;
+            if (border != null)
+            {
+                border.CornerRadius = new CornerRadius(0);
+                border.Effect = null;
+                border.Background = FlattenBrush(border.Background);
+            }
+            var control = node as Control;
+            if (control != null) control.Background = FlattenBrush(control.Background);
+            var panel = node as Panel;
+            if (panel != null) panel.Background = FlattenBrush(panel.Background);
+
+            int count = VisualTreeHelper.GetChildrenCount(node);
+            for (int i = 0; i < count; i++) ApplyMinimalAppearanceRecursive(VisualTreeHelper.GetChild(node, i));
+        }
+
         private void ApplyPerformanceMode(string mode)
         {
-            CurrentPerformanceMode = mode;
-            bool low = mode == "low";
-            bool balanced = mode == "balanced";
+            CurrentPerformanceMode = mode == "full" ? "full" : "minimal";
+            CaptureFullAppearance();
 
-            // Tối giản hiển thị khi chạy cấu hình thấp/trung bình.
-            if (low || balanced)
+            if (AppointmentsGrid != null)
             {
-                Background = System.Windows.Media.Brushes.WhiteSmoke;
-                if (AddView != null) AddView.Background = System.Windows.Media.Brushes.WhiteSmoke;
-                if (ListView != null) ListView.Background = System.Windows.Media.Brushes.WhiteSmoke;
-                if (SettingsView != null) SettingsView.Background = System.Windows.Media.Brushes.WhiteSmoke;
-                if (MainContentPanel != null) MainContentPanel.Background = System.Windows.Media.Brushes.WhiteSmoke;
-                if (AppointmentsGrid != null)
-                {
-                    AppointmentsGrid.EnableRowVirtualization = true;
-                    AppointmentsGrid.EnableColumnVirtualization = true;
-                    VirtualizingPanel.SetIsVirtualizing(AppointmentsGrid, true);
-                    VirtualizingPanel.SetVirtualizationMode(AppointmentsGrid, VirtualizationMode.Recycling);
-                }
+                // Virtualization/recycling giảm số hàng UI được tạo; giữ nguyên dữ liệu và thao tác bảng.
+                AppointmentsGrid.EnableRowVirtualization = true;
+                AppointmentsGrid.EnableColumnVirtualization = true;
+                VirtualizingPanel.SetIsVirtualizing(AppointmentsGrid, true);
+                VirtualizingPanel.SetVirtualizationMode(AppointmentsGrid, VirtualizationMode.Recycling);
+                ScrollViewer.SetCanContentScroll(AppointmentsGrid, true);
+            }
+
+            if (CurrentPerformanceMode == "minimal")
+            {
+                Background = Brushes.WhiteSmoke;
+                ApplyMinimalAppearanceRecursive(this);
+                if (MainContentPanel != null) MainContentPanel.Background = Brushes.WhiteSmoke;
+                if (AddView != null) AddView.Background = Brushes.WhiteSmoke;
+                if (ListView != null) ListView.Background = Brushes.WhiteSmoke;
+                if (SettingsView != null) SettingsView.Background = Brushes.WhiteSmoke;
             }
             else
             {
-                Background = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(234, 243, 244));
-                if (MainContentPanel != null)
-                    MainContentPanel.Background = new System.Windows.Media.LinearGradientBrush(
-                        System.Windows.Media.Color.FromRgb(244, 250, 250),
-                        System.Windows.Media.Color.FromRgb(230, 241, 242), 45);
+                foreach (Action restore in _fullAppearanceRestorers) restore();
+                Background = new SolidColorBrush(Color.FromRgb(234, 243, 244));
             }
         }
 
         private void SaveSettings_Click(object sender, RoutedEventArgs e)
         {
             var item = PerformanceModeBox.SelectedItem as ComboBoxItem;
-            string mode = item == null ? "low" :
-                (PerformanceModeBox.SelectedIndex == 0 ? "high" :
-                PerformanceModeBox.SelectedIndex == 1 ? "balanced" : "low");
+            string mode = item == null ? "minimal" : (PerformanceModeBox.SelectedIndex == 0 ? "full" : "minimal");
 
             try
             {
                 WritePerformanceSetting(mode);
-                SettingsStatusText.Text = "Đã lưu. Cấu hình mới áp dụng sau khi khởi động lại.";
-                ShowAppMessage("Đã lưu cấu hình. Vui lòng khởi động lại phần mềm để áp dụng đầy đủ.");
+                SettingsStatusText.Text = "Đã lưu giao diện. Giao diện mới áp dụng sau khi khởi động lại.";
+                ShowAppMessage("Đã lưu giao diện. Vui lòng khởi động lại phần mềm để áp dụng.");
             }
             catch (Exception ex)
             {

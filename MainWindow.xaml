@@ -1,4 +1,4 @@
-﻿<Window x:Class="PatientAppointmentManager.MainWindow"
+<Window x:Class="PatientAppointmentManager.MainWindow"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:cef="clr-namespace:CefSharp.Wpf;assembly=CefSharp.Wpf"
@@ -346,14 +346,13 @@
       <TextBlock Text="Cài đặt" FontSize="25" FontWeight="Bold" Foreground="#18333D" Margin="0,0,0,16"/>
       <Border Background="White" BorderBrush="#D7E8E9" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
        <StackPanel>
-        <TextBlock Text="Hiệu năng" FontSize="18" FontWeight="Bold" Margin="0,0,0,8"/>
-        <TextBlock Text="Chọn cấu hình sẽ được áp dụng sau khi khởi động lại phần mềm." Foreground="#637780" Margin="0,0,0,8"/>
-        <ComboBox x:Name="PerformanceModeBox" Width="260" Height="34" HorizontalAlignment="Left" SelectedIndex="2">
-         <ComboBoxItem Content="Cấu hình cao"/>
-         <ComboBoxItem Content="Cấu hình trung bình"/>
-         <ComboBoxItem Content="Cấu hình thấp"/>
+        <TextBlock Text="Giao diện" FontSize="18" FontWeight="Bold" Margin="0,0,0,8"/>
+        <TextBlock Text="Chọn giao diện. Giao diện tối giản tắt hiệu ứng trang trí và ưu tiên tiết kiệm tài nguyên; mọi chức năng vẫn được giữ nguyên." Foreground="#637780" Margin="0,0,0,8"/>
+        <ComboBox x:Name="PerformanceModeBox" Width="260" Height="34" HorizontalAlignment="Left" SelectedIndex="1">
+         <ComboBoxItem Content="Giao diện đầy đủ"/>
+         <ComboBoxItem Content="Giao diện tối giản"/>
         </ComboBox>
-        <Button Content="Lưu cấu hình" Width="140" Height="36" HorizontalAlignment="Left" Margin="0,10,0,0" Click="SaveSettings_Click"/>
+        <Button Content="Lưu giao diện" Width="140" Height="36" HorizontalAlignment="Left" Margin="0,10,0,0" Click="SaveSettings_Click"/>
         <TextBlock x:Name="SettingsStatusText" Foreground="#637780" Margin="0,8,0,0"/>
        </StackPanel>
       </Border>
