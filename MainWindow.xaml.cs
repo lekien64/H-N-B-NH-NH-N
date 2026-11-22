@@ -1,4 +1,4 @@
-using System.Windows.Media.Effects;
+﻿using System.Windows.Media.Effects;
 using System;
 using System.IO;
 using System.Diagnostics;
@@ -29,6 +29,7 @@ namespace PatientAppointmentManager
         public MainWindow()
         {
             InitializeComponent();
+            Loaded += MainWindow_Loaded;
 
             Database.Initialize();
             LoadAppSettings();
@@ -104,8 +105,19 @@ namespace PatientAppointmentManager
                 PerformanceModeBox.SelectedIndex =
                     CurrentPerformanceMode == "full" ? 0 : 1;
 
-            // Áp dụng trước khi cửa sổ chính được hiển thị.
-            ApplyPerformanceMode(CurrentPerformanceMode);
+            // Chờ WPF tạo đầy đủ visual tree rồi mới áp dụng giao diện.
+            // Nếu áp dụng trong constructor, nhiều Border/Control chưa xuất hiện trong VisualTree.
+        }
+
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Chạy sau layout/template creation để chế độ tối giản tác động tới
+            // toàn bộ thành phần WPF, không bỏ sót các Border trong template.
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                CaptureFullAppearance();
+                ApplyPerformanceMode(CurrentPerformanceMode);
+            }), DispatcherPriority.ApplicationIdle);
         }
 
         private void WritePerformanceSetting(string mode)
@@ -125,13 +137,15 @@ namespace PatientAppointmentManager
 
         private void CaptureAppearanceRecursive(DependencyObject node)
         {
+            // Không can thiệp vào cây hiển thị nội bộ của Chromium/CefSharp.
+            if (node is ChromiumWebBrowser) return;
+
             var border = node as Border;
             if (border != null)
             {
                 CornerRadius radius = border.CornerRadius;
                 Brush background = border.Background;
-                Effect effect = border.Effect;
-                _fullAppearanceRestorers.Add(() => { border.CornerRadius = radius; border.Background = background; border.Effect = effect; });
+                _fullAppearanceRestorers.Add(() => { border.CornerRadius = radius; border.Background = background; });
             }
             var control = node as Control;
             if (control != null)
@@ -144,6 +158,12 @@ namespace PatientAppointmentManager
             {
                 Brush background = panel.Background;
                 _fullAppearanceRestorers.Add(() => panel.Background = background);
+            }
+            var uiElement = node as UIElement;
+            if (uiElement != null)
+            {
+                Effect effect = uiElement.Effect;
+                _fullAppearanceRestorers.Add(() => uiElement.Effect = effect);
             }
 
             int count = VisualTreeHelper.GetChildrenCount(node);
@@ -160,6 +180,9 @@ namespace PatientAppointmentManager
 
         private void ApplyMinimalAppearanceRecursive(DependencyObject node)
         {
+            // Giữ nguyên giao diện và khả năng render của website trong trình duyệt.
+            if (node is ChromiumWebBrowser) return;
+
             var border = node as Border;
             if (border != null)
             {
@@ -171,6 +194,8 @@ namespace PatientAppointmentManager
             if (control != null) control.Background = FlattenBrush(control.Background);
             var panel = node as Panel;
             if (panel != null) panel.Background = FlattenBrush(panel.Background);
+            var uiElement = node as UIElement;
+            if (uiElement != null) uiElement.Effect = null;
 
             int count = VisualTreeHelper.GetChildrenCount(node);
             for (int i = 0; i < count; i++) ApplyMinimalAppearanceRecursive(VisualTreeHelper.GetChild(node, i));
@@ -215,8 +240,11 @@ namespace PatientAppointmentManager
             try
             {
                 WritePerformanceSetting(mode);
-                SettingsStatusText.Text = "Đã lưu giao diện. Giao diện mới áp dụng sau khi khởi động lại.";
-                ShowAppMessage("Đã lưu giao diện. Vui lòng khởi động lại phần mềm để áp dụng.");
+                ApplyPerformanceMode(mode);
+                SettingsStatusText.Text = mode == "minimal"
+                    ? "Đã lưu và áp dụng Giao diện tối giản."
+                    : "Đã lưu và áp dụng Giao diện đầy đủ.";
+                ShowAppMessage(SettingsStatusText.Text);
             }
             catch (Exception ex)
             {
