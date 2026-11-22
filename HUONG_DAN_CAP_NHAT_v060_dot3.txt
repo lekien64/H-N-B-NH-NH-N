@@ -1,0 +1,25 @@
+SOHENBN FULL 0.6.0 - DOT 3: WINDOWS CLASSIC / MINIMAL
+
+MUC TIEU
+- Giao diện tối giản mô phỏng ứng dụng Windows truyền thống: phẳng, vuông, đơn sắc.
+- Ưu tiên tốc độ và giảm công việc render giao diện trên máy cấu hình yếu.
+- Không thay đổi nghiệp vụ, dữ liệu SQLite, thao tác lịch hẹn hoặc chức năng trình duyệt CefSharp.
+
+GIAO DIEN TOI GIAN
+- Nền trắng/xám phẳng; không gradient, bóng đổ, blur, acrylic, bo góc hoặc hiệu ứng chuyển động trang trí.
+- Nút bấm, bộ lọc, ô nhập và khu vực điều hướng dùng kiểu phẳng, viền xám, chữ đen.
+- Thẻ thống kê và các khu vực nội dung chuyển sang nền trung tính.
+- Bảng dùng hàng trắng, đường kẻ mảnh, tiêu đề xám; giữ virtualization/recycling.
+- Chỉ giữ màu nghiệp vụ: Sáng/Chiều và Có tiêm/Không tiêm. Trạng thái chưa xác định hiển thị trung tính.
+- Nội dung trang web trong CefSharp không bị đổi CSS hoặc tắt JavaScript.
+
+GIAO DIEN DAY DU
+- Khôi phục giao diện đầy đủ hiện có.
+- Lựa chọn được lưu trong %LOCALAPPDATA%\PatientAppointmentManager\settings.json.
+- Cài mới mặc định Giao diện tối giản; đổi chế độ và nhấn Lưu giao diện để áp dụng ngay, sau khởi động lại vẫn giữ lựa chọn.
+
+BUILD
+- Nhánh mục tiêu: feature/v0.2-cefsharp-browser.
+- GitHub Actions không yêu cầu chứng chỉ ký số hoặc GitHub Secrets.
+- Tên file chạy: SoHenBN.exe.
+- Chưa xác nhận build thực tế trong môi trường tạo mã nguồn; cần chạy GitHub Actions và thử trên Windows 7/10/11.

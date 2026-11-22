@@ -1,4 +1,4 @@
-﻿SOHENCT FULL 0.6.0 - DOT 2: HAI CHE DO GIAO DIEN
+SOHENCT FULL 0.6.0 - DOT 2: HAI CHE DO GIAO DIEN
 
 1. THAY DOI
 - Chỉ còn 2 lựa chọn trong Cài đặt:
@@ -16,9 +16,7 @@
 - Màu trạng thái nghiệp vụ của bảng được giữ nguyên.
 
 3. LƯU Ý KIỂM THỬ
-- Đã kiểm tra cú pháp XML của MainWindow.xaml, đối chiếu các event handler và cân bằng dấu ngoặc ở MainWindow.xaml.cs.
-- Sửa lỗi áp dụng giao diện quá sớm: đợi WPF hoàn tất tạo VisualTree và control templates rồi mới chụp giao diện gốc, sau đó mới áp dụng chế độ tối giản.
-- Chế độ tối giản duyệt các thành phần WPF đã được dựng, bỏ gradient, CornerRadius và Effect; không duyệt vào cây nội bộ CefSharp.
+- Đã kiểm tra cú pháp XML của MainWindow.xaml và cân bằng dấu ngoặc ở các tệp C# chính.
 - Chưa biên dịch bằng MSBuild và chưa chạy thử trên Windows 7/10/11 trong môi trường hiện tại.
 - Chưa có đo đạc CPU/RAM thực tế. Không khẳng định mức giảm tài nguyên cụ thể.
 - Cần chạy GitHub Actions, sau đó kiểm tra cả hai giao diện, thao tác đặt/đổi/trả lịch, quét bệnh nhân, trình duyệt nhiều tab và dữ liệu hiện có trước khi phát hành.

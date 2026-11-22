@@ -1,4 +1,4 @@
-﻿using System.Windows.Media.Effects;
+using System.Windows.Media.Effects;
 using System;
 using System.IO;
 using System.Diagnostics;
@@ -61,6 +61,7 @@ namespace PatientAppointmentManager
 
         private string CurrentPerformanceMode = "minimal";
         private readonly List<Action> _fullAppearanceRestorers = new List<Action>();
+        private readonly Dictionary<DataGridColumn, Style> _fullGridHeaderStyles = new Dictionary<DataGridColumn, Style>();
         private bool _appearanceSnapshotCaptured;
 
         private void LoadAppSettings()
@@ -105,19 +106,12 @@ namespace PatientAppointmentManager
                 PerformanceModeBox.SelectedIndex =
                     CurrentPerformanceMode == "full" ? 0 : 1;
 
-            // Chờ WPF tạo đầy đủ visual tree rồi mới áp dụng giao diện.
-            // Nếu áp dụng trong constructor, nhiều Border/Control chưa xuất hiện trong VisualTree.
+            // Giao diện được áp dụng trong sự kiện Loaded, khi Visual Tree đã được dựng đầy đủ.
         }
 
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            // Chạy sau layout/template creation để chế độ tối giản tác động tới
-            // toàn bộ thành phần WPF, không bỏ sót các Border trong template.
-            Dispatcher.BeginInvoke(new Action(() =>
-            {
-                CaptureFullAppearance();
-                ApplyPerformanceMode(CurrentPerformanceMode);
-            }), DispatcherPriority.ApplicationIdle);
+            ApplyPerformanceMode(CurrentPerformanceMode);
         }
 
         private void WritePerformanceSetting(string mode)
@@ -137,37 +131,103 @@ namespace PatientAppointmentManager
 
         private void CaptureAppearanceRecursive(DependencyObject node)
         {
-            // Không can thiệp vào cây hiển thị nội bộ của Chromium/CefSharp.
-            if (node is ChromiumWebBrowser) return;
-
             var border = node as Border;
             if (border != null)
             {
                 CornerRadius radius = border.CornerRadius;
                 Brush background = border.Background;
-                _fullAppearanceRestorers.Add(() => { border.CornerRadius = radius; border.Background = background; });
+                Brush borderBrush = border.BorderBrush;
+                Thickness borderThickness = border.BorderThickness;
+                Effect effect = border.Effect;
+                _fullAppearanceRestorers.Add(() =>
+                {
+                    border.CornerRadius = radius; border.Background = background;
+                    border.BorderBrush = borderBrush; border.BorderThickness = borderThickness; border.Effect = effect;
+                });
             }
+
             var control = node as Control;
             if (control != null)
             {
                 Brush background = control.Background;
-                _fullAppearanceRestorers.Add(() => control.Background = background);
+                Brush foreground = control.Foreground;
+                Brush borderBrush = control.BorderBrush;
+                Thickness borderThickness = control.BorderThickness;
+                Style style = control.Style;
+                FontWeight fontWeight = control.FontWeight;
+                _fullAppearanceRestorers.Add(() =>
+                {
+                    control.Background = background; control.Foreground = foreground;
+                    control.BorderBrush = borderBrush; control.BorderThickness = borderThickness;
+                    control.Style = style; control.FontWeight = fontWeight;
+                });
             }
+
+            var text = node as TextBlock;
+            if (text != null)
+            {
+                Brush foreground = text.Foreground;
+                _fullAppearanceRestorers.Add(() => text.Foreground = foreground);
+            }
+
             var panel = node as Panel;
             if (panel != null)
             {
                 Brush background = panel.Background;
                 _fullAppearanceRestorers.Add(() => panel.Background = background);
             }
-            var uiElement = node as UIElement;
-            if (uiElement != null)
-            {
-                Effect effect = uiElement.Effect;
-                _fullAppearanceRestorers.Add(() => uiElement.Effect = effect);
-            }
 
             int count = VisualTreeHelper.GetChildrenCount(node);
             for (int i = 0; i < count; i++) CaptureAppearanceRecursive(VisualTreeHelper.GetChild(node, i));
+        }
+
+        private void ApplyMinimalAppearanceRecursive(DependencyObject node, bool insideDataGrid)
+        {
+            bool inGrid = insideDataGrid || node is DataGrid;
+            var border = node as Border;
+            if (border != null)
+            {
+                border.CornerRadius = new CornerRadius(0);
+                border.Effect = null;
+                if (border.Background != null && border.Background != Brushes.Transparent)
+                    border.Background = new SolidColorBrush(Color.FromRgb(245, 245, 245));
+                if (border.BorderThickness.Left + border.BorderThickness.Top + border.BorderThickness.Right + border.BorderThickness.Bottom > 0)
+                    border.BorderBrush = new SolidColorBrush(Color.FromRgb(160, 160, 160));
+            }
+
+            var button = node as Button;
+            if (button != null)
+            {
+                button.Style = (Style)FindResource("ClassicButtonStyle");
+                button.Background = new SolidColorBrush(Color.FromRgb(230, 230, 230));
+                button.Foreground = Brushes.Black;
+                button.BorderBrush = new SolidColorBrush(Color.FromRgb(128, 128, 128));
+                button.BorderThickness = new Thickness(1);
+                button.FontWeight = FontWeights.Normal;
+            }
+            else
+            {
+                var control = node as Control;
+                if (control != null)
+                {
+                    control.Background = (control is TextBox || control is ComboBox || control is DatePicker || control is DataGrid)
+                        ? Brushes.White : FlattenBrush(control.Background);
+                    control.Foreground = Brushes.Black;
+                    control.BorderBrush = new SolidColorBrush(Color.FromRgb(128, 128, 128));
+                    control.BorderThickness = new Thickness(1);
+                    control.FontWeight = FontWeights.Normal;
+                }
+            }
+
+            var text = node as TextBlock;
+            if (text != null && !inGrid) text.Foreground = Brushes.Black;
+
+            var panel = node as Panel;
+            if (panel != null && panel.Background != null && panel.Background != Brushes.Transparent)
+                panel.Background = new SolidColorBrush(Color.FromRgb(245, 245, 245));
+
+            int count = VisualTreeHelper.GetChildrenCount(node);
+            for (int i = 0; i < count; i++) ApplyMinimalAppearanceRecursive(VisualTreeHelper.GetChild(node, i), inGrid);
         }
 
         private Brush FlattenBrush(Brush brush)
@@ -178,29 +238,6 @@ namespace PatientAppointmentManager
             return brush;
         }
 
-        private void ApplyMinimalAppearanceRecursive(DependencyObject node)
-        {
-            // Giữ nguyên giao diện và khả năng render của website trong trình duyệt.
-            if (node is ChromiumWebBrowser) return;
-
-            var border = node as Border;
-            if (border != null)
-            {
-                border.CornerRadius = new CornerRadius(0);
-                border.Effect = null;
-                border.Background = FlattenBrush(border.Background);
-            }
-            var control = node as Control;
-            if (control != null) control.Background = FlattenBrush(control.Background);
-            var panel = node as Panel;
-            if (panel != null) panel.Background = FlattenBrush(panel.Background);
-            var uiElement = node as UIElement;
-            if (uiElement != null) uiElement.Effect = null;
-
-            int count = VisualTreeHelper.GetChildrenCount(node);
-            for (int i = 0; i < count; i++) ApplyMinimalAppearanceRecursive(VisualTreeHelper.GetChild(node, i));
-        }
-
         private void ApplyPerformanceMode(string mode)
         {
             CurrentPerformanceMode = mode == "full" ? "full" : "minimal";
@@ -208,7 +245,6 @@ namespace PatientAppointmentManager
 
             if (AppointmentsGrid != null)
             {
-                // Virtualization/recycling giảm số hàng UI được tạo; giữ nguyên dữ liệu và thao tác bảng.
                 AppointmentsGrid.EnableRowVirtualization = true;
                 AppointmentsGrid.EnableColumnVirtualization = true;
                 VirtualizingPanel.SetIsVirtualizing(AppointmentsGrid, true);
@@ -218,17 +254,65 @@ namespace PatientAppointmentManager
 
             if (CurrentPerformanceMode == "minimal")
             {
-                Background = Brushes.WhiteSmoke;
-                ApplyMinimalAppearanceRecursive(this);
-                if (MainContentPanel != null) MainContentPanel.Background = Brushes.WhiteSmoke;
-                if (AddView != null) AddView.Background = Brushes.WhiteSmoke;
-                if (ListView != null) ListView.Background = Brushes.WhiteSmoke;
-                if (SettingsView != null) SettingsView.Background = Brushes.WhiteSmoke;
+                Background = new SolidColorBrush(Color.FromRgb(240, 240, 240));
+                if (Sidebar != null) Sidebar.Background = new SolidColorBrush(Color.FromRgb(224, 224, 224));
+                if (MainContentPanel != null) MainContentPanel.Background = new SolidColorBrush(Color.FromRgb(240, 240, 240));
+                ApplyMinimalAppearanceRecursive(this, false);
+                if (AddNavButton != null) AddNavButton.Content = "WEB";
+                ApplyMinimalDataGridStyle();
+                UpdateSidebarSelection(GetCurrentViewName());
             }
             else
             {
                 foreach (Action restore in _fullAppearanceRestorers) restore();
+                foreach (var entry in _fullGridHeaderStyles) entry.Key.HeaderStyle = entry.Value;
+                _fullGridHeaderStyles.Clear();
+                if (AppointmentsGrid != null)
+                {
+                    AppointmentsGrid.RowHeight = 34;
+                    AppointmentsGrid.ColumnHeaderHeight = 36;
+                    AppointmentsGrid.AlternatingRowBackground = new SolidColorBrush(Color.FromRgb(248, 251, 252));
+                    AppointmentsGrid.HorizontalGridLinesBrush = new SolidColorBrush(Color.FromRgb(225, 233, 236));
+                    AppointmentsGrid.VerticalGridLinesBrush = new SolidColorBrush(Color.FromRgb(238, 242, 244));
+                }
                 Background = new SolidColorBrush(Color.FromRgb(234, 243, 244));
+                if (AddNavButton != null) AddNavButton.Content = "🌐";
+                UpdateSidebarSelection(GetCurrentViewName());
+            }
+        }
+
+        private string GetCurrentViewName()
+        {
+            if (ListView != null && ListView.Visibility == Visibility.Visible) return "list";
+            if (SettingsView != null && SettingsView.Visibility == Visibility.Visible) return "settings";
+            return "add";
+        }
+
+        private void ApplyMinimalDataGridStyle()
+        {
+            if (AppointmentsGrid == null) return;
+            AppointmentsGrid.Background = Brushes.White;
+            AppointmentsGrid.Foreground = Brushes.Black;
+            AppointmentsGrid.BorderBrush = new SolidColorBrush(Color.FromRgb(128, 128, 128));
+            AppointmentsGrid.RowBackground = Brushes.White;
+            AppointmentsGrid.AlternatingRowBackground = Brushes.White;
+            AppointmentsGrid.HorizontalGridLinesBrush = new SolidColorBrush(Color.FromRgb(210, 210, 210));
+            AppointmentsGrid.VerticalGridLinesBrush = new SolidColorBrush(Color.FromRgb(225, 225, 225));
+            AppointmentsGrid.GridLinesVisibility = DataGridGridLinesVisibility.Horizontal;
+            foreach (var column in AppointmentsGrid.Columns)
+            {
+                if (!_fullGridHeaderStyles.ContainsKey(column)) _fullGridHeaderStyles[column] = column.HeaderStyle;
+                column.HeaderStyle = new Style(typeof(DataGridColumnHeader))
+                {
+                    Setters = {
+                        new Setter(Control.BackgroundProperty, new SolidColorBrush(Color.FromRgb(230, 230, 230))),
+                        new Setter(Control.ForegroundProperty, Brushes.Black),
+                        new Setter(Control.BorderBrushProperty, new SolidColorBrush(Color.FromRgb(160, 160, 160))),
+                        new Setter(Control.BorderThicknessProperty, new Thickness(0, 0, 0, 1)),
+                        new Setter(Control.FontWeightProperty, FontWeights.Normal),
+                        new Setter(Control.PaddingProperty, new Thickness(4, 3, 4, 3))
+                    }
+                };
             }
         }
 
@@ -396,16 +480,27 @@ namespace PatientAppointmentManager
             SetNavButtonState(SettingsNavButton, selected == "settings");
         }
 
-        private static void SetNavButtonState(Button button, bool selected)
+        private void SetNavButtonState(Button button, bool selected)
         {
+            if (CurrentPerformanceMode == "minimal")
+            {
+                button.Background = selected
+                    ? new SolidColorBrush(Color.FromRgb(205, 205, 205))
+                    : new SolidColorBrush(Color.FromRgb(238, 238, 238));
+                button.BorderBrush = new SolidColorBrush(Color.FromRgb(128, 128, 128));
+                button.BorderThickness = new Thickness(1);
+                button.Foreground = Brushes.Black;
+                button.Style = (Style)FindResource("ClassicButtonStyle");
+                return;
+            }
             button.Background = selected
-                ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(190, 235, 229))
-                : System.Windows.Media.Brushes.White;
+                ? new SolidColorBrush(Color.FromRgb(190, 235, 229))
+                : Brushes.White;
             button.BorderBrush = selected
-                ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(63, 174, 160))
-                : new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(214, 232, 232));
+                ? new SolidColorBrush(Color.FromRgb(63, 174, 160))
+                : new SolidColorBrush(Color.FromRgb(214, 232, 232));
             button.BorderThickness = selected ? new Thickness(2) : new Thickness(1);
-            button.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(22, 125, 125));
+            button.Foreground = new SolidColorBrush(Color.FromRgb(22, 125, 125));
         }
 
         private ChromiumWebBrowser ActiveBrowser
@@ -1800,7 +1895,7 @@ namespace PatientAppointmentManager
                 {
                     AddGridCellTrigger(cellStyle, "Có tiêm", System.Windows.Media.Color.FromRgb(210,242,218), System.Windows.Media.Color.FromRgb(75,170,105), System.Windows.Media.Color.FromRgb(24,112,55));
                     AddGridCellTrigger(cellStyle, "Không tiêm", System.Windows.Media.Color.FromRgb(232,237,242), System.Windows.Media.Color.FromRgb(145,158,170), System.Windows.Media.Color.FromRgb(75,87,96));
-                    AddGridCellTrigger(cellStyle, "Chưa xác định", System.Windows.Media.Color.FromRgb(255,229,199), System.Windows.Media.Color.FromRgb(220,145,65), System.Windows.Media.Color.FromRgb(150,83,12));
+                    AddGridCellTrigger(cellStyle, "Chưa xác định", System.Windows.Media.Color.FromRgb(238,238,238), System.Windows.Media.Color.FromRgb(160,160,160), System.Windows.Media.Color.FromRgb(70,70,70));
                 }
                 var column = new DataGridTextColumn
                 {
@@ -1817,6 +1912,7 @@ namespace PatientAppointmentManager
                 };
                 AppointmentsGrid.Columns.Add(column);
             }
+            if (CurrentPerformanceMode == "minimal") ApplyMinimalDataGridStyle();
         }
 
         private void AppointmentsGrid_Sorting(object sender, DataGridSortingEventArgs e)
