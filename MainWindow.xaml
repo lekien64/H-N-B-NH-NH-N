@@ -40,10 +40,11 @@
     </StackPanel.Resources>
     <Button x:Name="AddNavButton" Content="🌐" ToolTip="Trình duyệt và quét danh sách" Click="AddTab_Click" Style="{StaticResource SidebarIconButton}"/>
     <Button x:Name="ListNavButton" Content="▦" ToolTip="Lịch đã hẹn" Click="ListTab_Click" Style="{StaticResource SidebarIconButton}" FontSize="32"/>
+    <Button x:Name="SettingsNavButton" Content="⚙" ToolTip="Cài đặt" Click="SettingsTab_Click" Style="{StaticResource SidebarIconButton}" FontSize="27"/>
    </StackPanel>
   </Border>
 
-  <Grid Grid.Column="1" Margin="20">
+  <Grid x:Name="MainContentPanel" Grid.Column="1" Margin="20">
    <Grid.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#F4FAFA" Offset="0"/><GradientStop Color="#E6F1F2" Offset="1"/></LinearGradientBrush></Grid.Background>
 
    <!-- TRÌNH DUYỆT NHIỀU THẺ VÀ NHẬP LỊCH -->
@@ -323,12 +324,69 @@
              Foreground="White"
              Click="ReturnAppointment_Click"/>
 
+     <Button Content="Xóa lịch đã chọn"
+             Width="130"
+             Height="36"
+             Margin="10,0,0,0"
+             Background="#A43D3D"
+             Foreground="White"
+             Click="DeleteSelectedAppointment_Click"/>
      <Button Content="Làm mới"
              Width="100"
              Height="36"
              Margin="10,0,0,0"
              Click="Refresh_Click"/>
     </StackPanel>
+   </Grid>
+
+   <!-- CÀI ĐẶT -->
+   <Grid x:Name="SettingsView" Visibility="Collapsed">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+     <StackPanel>
+      <TextBlock Text="Cài đặt" FontSize="25" FontWeight="Bold" Foreground="#18333D" Margin="0,0,0,16"/>
+      <Border Background="White" BorderBrush="#D7E8E9" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
+       <StackPanel>
+        <TextBlock Text="Hiệu năng" FontSize="18" FontWeight="Bold" Margin="0,0,0,8"/>
+        <TextBlock Text="Chọn cấu hình sẽ được áp dụng sau khi khởi động lại phần mềm." Foreground="#637780" Margin="0,0,0,8"/>
+        <ComboBox x:Name="PerformanceModeBox" Width="260" Height="34" HorizontalAlignment="Left" SelectedIndex="2">
+         <ComboBoxItem Content="Cấu hình cao"/>
+         <ComboBoxItem Content="Cấu hình trung bình"/>
+         <ComboBoxItem Content="Cấu hình thấp"/>
+        </ComboBox>
+        <Button Content="Lưu cấu hình" Width="140" Height="36" HorizontalAlignment="Left" Margin="0,10,0,0" Click="SaveSettings_Click"/>
+        <TextBlock x:Name="SettingsStatusText" Foreground="#637780" Margin="0,8,0,0"/>
+       </StackPanel>
+      </Border>
+      <Border Background="White" BorderBrush="#D7E8E9" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
+       <StackPanel>
+        <TextBlock Text="Sao lưu và khôi phục dữ liệu" FontSize="18" FontWeight="Bold" Margin="0,0,0,8"/>
+        <TextBlock Text="Bản sao lưu chứa dữ liệu lịch hẹn và được lưu trong thư mục Backups." Foreground="#637780" TextWrapping="Wrap" Margin="0,0,0,10"/>
+        <WrapPanel>
+         <Button Content="Sao lưu dữ liệu ngay" Width="160" Height="36" Margin="0,0,8,0" Click="BackupDatabase_Click"/>
+         <Button Content="Khôi phục từ file" Width="145" Height="36" Margin="0,0,8,0" Click="RestoreDatabase_Click"/>
+         <Button Content="Mở thư mục dữ liệu" Width="150" Height="36" Click="OpenDataFolder_Click"/>
+        </WrapPanel>
+       </StackPanel>
+      </Border>
+      <Border Background="White" BorderBrush="#D7E8E9" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
+       <StackPanel>
+        <TextBlock Text="Xóa lịch hẹn" FontSize="18" FontWeight="Bold" Foreground="#A43D3D" Margin="0,0,0,8"/>
+        <TextBlock Text="Mỗi thao tác xóa sẽ tự sao lưu cơ sở dữ liệu trước khi thực hiện. Chỉ xóa bản ghi lịch hẹn, không xóa hồ sơ bệnh nhân." TextWrapping="Wrap" Foreground="#637780" Margin="0,0,0,10"/>
+        <TextBlock Text="Xóa theo khoảng ngày" FontWeight="SemiBold"/>
+        <WrapPanel Margin="0,5,0,8">
+         <StackPanel Margin="0,0,12,0"><TextBlock Text="Từ ngày" FontSize="12"/><DatePicker x:Name="DeleteFromDatePicker" Width="150" SelectedDateFormat="Short"/></StackPanel>
+         <StackPanel><TextBlock Text="Đến ngày" FontSize="12"/><DatePicker x:Name="DeleteToDatePicker" Width="150" SelectedDateFormat="Short"/></StackPanel>
+        </WrapPanel>
+        <WrapPanel>
+         <Button Content="Xóa lịch theo ngày" Width="150" Height="36" Margin="0,0,8,8" Background="#A43D3D" Foreground="White" Click="DeleteAppointmentsByDate_Click"/>
+         <Button Content="Xóa lịch đã trả" Width="130" Height="36" Margin="0,0,8,8" Background="#A43D3D" Foreground="White" Click="DeleteReturnedAppointments_Click"/>
+         <Button Content="Xóa toàn bộ lịch" Width="140" Height="36" Margin="0,0,8,8" Background="#8B2525" Foreground="White" Click="DeleteAllAppointments_Click"/>
+        </WrapPanel>
+        <TextBlock Text="Thao tác xóa không thể hoàn tác trực tiếp. Hãy giữ bản sao lưu ở nơi an toàn." Foreground="#A43D3D" TextWrapping="Wrap"/>
+       </StackPanel>
+      </Border>
+     </StackPanel>
+    </ScrollViewer>
    </Grid>
   </Grid>
  </Grid>

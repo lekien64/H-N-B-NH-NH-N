@@ -1,0 +1,28 @@
+SOHENCT FULL 0.6.0 - DOT 1
+Nen tang: ma nguon Full v0.5.18
+
+DA BO SUNG
+1. Tab Cai dat va luu cau hinh rieng trong %LOCALAPPDATA%\\PatientAppointmentManager\\settings.json.
+2. Ba che do: Cao, Trung binh, Thap. Lua chon duoc luu va doc lai khi khoi dong.
+3. Sao luu SQLite vao thu muc Backups.
+4. Khoi phuc SQLite tu file .db, co sao luu du lieu hien tai truoc khi thay the.
+5. Xoa lich theo khoang ngay, xoa lich da tra, xoa toan bo lich.
+6. Them nut xoa lich da chon trong tab Lich hen.
+7. Moi thao tac xoa deu hien xem truoc so ban ghi va tao ban sao luu truoc.
+8. Xoa lich khong xoa ho so benh nhan. AuditLog lien quan den lich bi xoa cung duoc don dep.
+
+BAO TOAN
+- Khong thay doi schema bang Appointments.
+- Khong thay doi luong quet, tao, doi, tra lich.
+- Khong sua nhanh Full goc tren GitHub; goi nay la ban lam viec de dua len nhanh feature/v0.2-cefsharp-browser.
+
+KIEM TRA
+- XAML parse XML thanh cong.
+- Tat ca event handler XAML co phuong thuc tuong ung.
+- Dau ngoac C# can bang.
+- Chua build bang MSBuild va chua kiem thu tren Windows 7/10/11.
+
+LUU Y
+- Che do Thap dot nay da toi gian nen va bat virtualization/recycling cho DataGrid.
+- Chua toi uu sau CefSharp hoac thay doi chinh sach tab nen; se lam o dot tiep theo sau khi kiem thu.
+- Nhap/xuat Excel chua nam trong dot 1.

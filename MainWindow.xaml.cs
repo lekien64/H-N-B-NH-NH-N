@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Diagnostics;
 using System.Data;
 using System.ComponentModel;
 using System.Text;
@@ -27,21 +29,271 @@ namespace PatientAppointmentManager
             InitializeComponent();
 
             Database.Initialize();
+            LoadAppSettings();
             UpdateSidebarSelection("add");
 
             AppointmentDatePicker.SelectedDate = DateTime.Today.AddDays(1);
             FromDatePicker.SelectedDate = DateTime.Today;
             ToDatePicker.SelectedDate = DateTime.Today;
+            DeleteFromDatePicker.SelectedDate = DateTime.Today;
+            DeleteToDatePicker.SelectedDate = DateTime.Today;
 
             ConfigureBrowserTab(FirstBrowserTab, AddHospitalBrowser, "Trang 1");
             RegisterBrowser(AddHospitalBrowser);
             LoadBrowserHistory(AddUrlBox);
         }
 
+
+        private string SettingsFilePath
+        {
+            get
+            {
+                string folder = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "PatientAppointmentManager");
+                Directory.CreateDirectory(folder);
+                return Path.Combine(folder, "settings.json");
+            }
+        }
+
+        private string CurrentPerformanceMode = "low";
+
+        private void LoadAppSettings()
+        {
+            bool createDefaultSettings = !File.Exists(SettingsFilePath);
+            CurrentPerformanceMode = "low"; // Mặc định khi cài đặt/chạy lần đầu.
+
+            try
+            {
+                if (!createDefaultSettings)
+                {
+                    var serializer = new JavaScriptSerializer();
+                    var values = serializer.Deserialize<Dictionary<string, string>>(
+                        File.ReadAllText(SettingsFilePath, Encoding.UTF8));
+                    if (values != null && values.ContainsKey("PerformanceMode"))
+                    {
+                        string savedMode = (values["PerformanceMode"] ?? "").Trim().ToLowerInvariant();
+                        if (savedMode == "high" || savedMode == "balanced" || savedMode == "low")
+                            CurrentPerformanceMode = savedMode;
+                        else
+                            createDefaultSettings = true;
+                    }
+                    else
+                    {
+                        createDefaultSettings = true;
+                    }
+                }
+            }
+            catch
+            {
+                // Tệp cấu hình lỗi/không đọc được: quay về cấu hình thấp an toàn.
+                CurrentPerformanceMode = "low";
+                createDefaultSettings = true;
+            }
+
+            if (createDefaultSettings)
+                WritePerformanceSetting(CurrentPerformanceMode);
+
+            if (PerformanceModeBox != null)
+                PerformanceModeBox.SelectedIndex =
+                    CurrentPerformanceMode == "high" ? 0 :
+                    CurrentPerformanceMode == "balanced" ? 1 : 2;
+
+            // Áp dụng trước khi cửa sổ chính được hiển thị.
+            ApplyPerformanceMode(CurrentPerformanceMode);
+        }
+
+        private void WritePerformanceSetting(string mode)
+        {
+            var values = new Dictionary<string, string>();
+            values["PerformanceMode"] = mode;
+            File.WriteAllText(SettingsFilePath,
+                new JavaScriptSerializer().Serialize(values), Encoding.UTF8);
+        }
+
+        private void ApplyPerformanceMode(string mode)
+        {
+            CurrentPerformanceMode = mode;
+            bool low = mode == "low";
+            bool balanced = mode == "balanced";
+
+            // Tối giản hiển thị khi chạy cấu hình thấp/trung bình.
+            if (low || balanced)
+            {
+                Background = System.Windows.Media.Brushes.WhiteSmoke;
+                if (AddView != null) AddView.Background = System.Windows.Media.Brushes.WhiteSmoke;
+                if (ListView != null) ListView.Background = System.Windows.Media.Brushes.WhiteSmoke;
+                if (SettingsView != null) SettingsView.Background = System.Windows.Media.Brushes.WhiteSmoke;
+                if (MainContentPanel != null) MainContentPanel.Background = System.Windows.Media.Brushes.WhiteSmoke;
+                if (AppointmentsGrid != null)
+                {
+                    AppointmentsGrid.EnableRowVirtualization = true;
+                    AppointmentsGrid.EnableColumnVirtualization = true;
+                    VirtualizingPanel.SetIsVirtualizing(AppointmentsGrid, true);
+                    VirtualizingPanel.SetVirtualizationMode(AppointmentsGrid, VirtualizationMode.Recycling);
+                }
+            }
+            else
+            {
+                Background = new System.Windows.Media.SolidColorBrush(
+                    System.Windows.Media.Color.FromRgb(234, 243, 244));
+                if (MainContentPanel != null)
+                    MainContentPanel.Background = new System.Windows.Media.LinearGradientBrush(
+                        System.Windows.Media.Color.FromRgb(244, 250, 250),
+                        System.Windows.Media.Color.FromRgb(230, 241, 242), 45);
+            }
+        }
+
+        private void SaveSettings_Click(object sender, RoutedEventArgs e)
+        {
+            var item = PerformanceModeBox.SelectedItem as ComboBoxItem;
+            string mode = item == null ? "low" :
+                (PerformanceModeBox.SelectedIndex == 0 ? "high" :
+                PerformanceModeBox.SelectedIndex == 1 ? "balanced" : "low");
+
+            try
+            {
+                WritePerformanceSetting(mode);
+                SettingsStatusText.Text = "Đã lưu. Cấu hình mới áp dụng sau khi khởi động lại.";
+                ShowAppMessage("Đã lưu cấu hình. Vui lòng khởi động lại phần mềm để áp dụng đầy đủ.");
+            }
+            catch (Exception ex)
+            {
+                ShowAppMessage("Không thể lưu cài đặt: " + ex.Message);
+            }
+        }
+
+        private void BackupDatabase_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                string path = Database.BackupDatabase();
+                ShowAppMessage("Đã sao lưu dữ liệu thành công:\n" + path);
+            }
+            catch (Exception ex) { ShowAppMessage("Sao lưu thất bại:\n" + ex.Message); }
+        }
+
+
+        private void RestoreDatabase_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = "Chọn file sao lưu lịch hẹn",
+                Filter = "SQLite database (*.db)|*.db|All files (*.*)|*.*",
+                InitialDirectory = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "PatientAppointmentManager", "Backups")
+            };
+
+            if (dialog.ShowDialog(this) != true) return;
+            if (ShowAppMessage("Khôi phục sẽ thay thế dữ liệu lịch hẹn hiện tại. Phần mềm sẽ sao lưu dữ liệu hiện tại trước. Tiếp tục?",
+                "Xác nhận khôi phục", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+                return;
+
+            try
+            {
+                string currentBackup = Database.BackupDatabase();
+                Database.RestoreDatabase(dialog.FileName);
+                LoadAppointments();
+                ShowAppMessage("Đã khôi phục dữ liệu.\nBản sao lưu dữ liệu trước khi khôi phục:\n" + currentBackup);
+            }
+            catch (Exception ex)
+            {
+                ShowAppMessage("Khôi phục dữ liệu thất bại:\n" + ex.Message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void OpenDataFolder_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                string folder = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "PatientAppointmentManager");
+                Directory.CreateDirectory(folder);
+                Process.Start("explorer.exe", folder);
+            }
+            catch (Exception ex) { ShowAppMessage("Không mở được thư mục dữ liệu:\n" + ex.Message); }
+        }
+
+        private void ExecuteBulkDelete(DateTime? from, DateTime? to, bool returnedOnly, string description)
+        {
+            try
+            {
+                int count = Database.CountAppointments(from, to, returnedOnly);
+                if (count == 0)
+                {
+                    ShowAppMessage("Không có lịch hẹn phù hợp để xóa.");
+                    return;
+                }
+
+                string detail = description + "\nSố lịch sẽ xóa: " + count +
+                    "\n\nPhần mềm sẽ sao lưu dữ liệu trước khi xóa. Bạn có chắc chắn?";
+                if (ShowAppMessage(detail, "Xác nhận xóa lịch",
+                    MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+                    return;
+
+                string backup = Database.BackupDatabase();
+                int deleted = Database.DeleteAppointments(from, to, returnedOnly);
+                LoadAppointments();
+                ShowAppMessage("Đã xóa " + deleted + " lịch hẹn.\nBản sao lưu:\n" + backup);
+            }
+            catch (Exception ex) { ShowAppMessage("Không thể xóa lịch:\n" + ex.Message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error); }
+        }
+
+        private void DeleteAppointmentsByDate_Click(object sender, RoutedEventArgs e)
+        {
+            if (!DeleteFromDatePicker.SelectedDate.HasValue || !DeleteToDatePicker.SelectedDate.HasValue)
+            {
+                ShowAppMessage("Hãy chọn đầy đủ ngày bắt đầu và ngày kết thúc.");
+                return;
+            }
+            DateTime from = DeleteFromDatePicker.SelectedDate.Value.Date;
+            DateTime to = DeleteToDatePicker.SelectedDate.Value.Date;
+            if (to < from) { ShowAppMessage("Ngày kết thúc phải bằng hoặc sau ngày bắt đầu."); return; }
+            ExecuteBulkDelete(from, to, false, "Xóa lịch hẹn từ " + from.ToString("dd/MM/yyyy") + " đến " + to.ToString("dd/MM/yyyy"));
+        }
+
+        private void DeleteReturnedAppointments_Click(object sender, RoutedEventArgs e)
+        {
+            ExecuteBulkDelete(null, null, true, "Xóa tất cả lịch đã trả hẹn");
+        }
+
+        private void DeleteAllAppointments_Click(object sender, RoutedEventArgs e)
+        {
+            ExecuteBulkDelete(null, null, false, "XÓA TOÀN BỘ LỊCH HẸN");
+        }
+
+        private void DeleteSelectedAppointment_Click(object sender, RoutedEventArgs e)
+        {
+            var view = AppointmentsGrid.SelectedItem as DataRowView;
+            if (view == null) { ShowAppMessage("Hãy chọn một lịch hẹn cần xóa."); return; }
+
+            long id = Convert.ToInt64(view["Id"]);
+            string name = Convert.ToString(view["Tên bệnh nhân"]);
+            string code = Convert.ToString(view["Mã BN"]);
+            if (ShowAppMessage("Xóa lịch hẹn của:\n" + name + "\nMã BN: " + code +
+                "\n\nHồ sơ bệnh nhân không bị xóa. Phần mềm sẽ sao lưu trước.",
+                "Xác nhận xóa lịch", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+                return;
+
+            try
+            {
+                string backup = Database.BackupDatabase();
+                int deleted = Database.DeleteAppointment(id);
+                LoadAppointments();
+                ShowAppMessage(deleted > 0 ? "Đã xóa lịch hẹn.\nBản sao lưu:\n" + backup : "Lịch hẹn không còn tồn tại.");
+            }
+            catch (Exception ex) { ShowAppMessage("Không thể xóa lịch:\n" + ex.Message, "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error); }
+        }
+
+        private void SettingsTab_Click(object sender, RoutedEventArgs e) => ShowView("settings");
+
         private void ShowView(string name)
         {
             AddView.Visibility = name == "add" ? Visibility.Visible : Visibility.Collapsed;
             ListView.Visibility = name == "list" ? Visibility.Visible : Visibility.Collapsed;
+            SettingsView.Visibility = name == "settings" ? Visibility.Visible : Visibility.Collapsed;
 
             UpdateSidebarSelection(name);
             if (name == "list")
@@ -52,6 +304,7 @@ namespace PatientAppointmentManager
         {
             SetNavButtonState(AddNavButton, selected == "add");
             SetNavButtonState(ListNavButton, selected == "list");
+            SetNavButtonState(SettingsNavButton, selected == "settings");
         }
 
         private static void SetNavButtonState(Button button, bool selected)

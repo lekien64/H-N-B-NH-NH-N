@@ -507,6 +507,127 @@ VALUES(@id, 'Đổi lịch', @now, @note)";
             }
         }
 
+
+        public static string BackupDatabase()
+        {
+            Directory.CreateDirectory(Folder);
+            string backupFolder = Path.Combine(Folder, "Backups");
+            Directory.CreateDirectory(backupFolder);
+            string backupPath = Path.Combine(backupFolder,
+                "appointments_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".db");
+            using (var source = new SQLiteConnection(ConnectionString))
+            {
+                source.Open();
+                using (var destination = new SQLiteConnection("Data Source=" + backupPath + ";Version=3;"))
+                {
+                    destination.Open();
+                    source.BackupDatabase(destination, "main", "main", -1, null, 0);
+                }
+            }
+            return backupPath;
+        }
+
+
+        public static void RestoreDatabase(string sourcePath)
+        {
+            if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath))
+                throw new FileNotFoundException("Không tìm thấy file sao lưu.", sourcePath);
+
+            using (var check = new SQLiteConnection("Data Source=" + sourcePath + ";Version=3;"))
+            {
+                check.Open();
+                using (var cmd = check.CreateCommand())
+                {
+                    cmd.CommandText = "PRAGMA integrity_check";
+                    string result = Convert.ToString(cmd.ExecuteScalar());
+                    if (!string.Equals(result, "ok", StringComparison.OrdinalIgnoreCase))
+                        throw new InvalidDataException("File sao lưu không hợp lệ hoặc bị lỗi.");
+                }
+            }
+
+            SQLiteConnection.ClearAllPools();
+            File.Copy(sourcePath, DbPath, true);
+            Initialize();
+        }
+
+        public static int CountAppointments(DateTime? from, DateTime? to, bool returnedOnly)
+        {
+            using (var c = new SQLiteConnection(ConnectionString))
+            {
+                c.Open();
+                using (var cmd = c.CreateCommand())
+                {
+                    string where = " WHERE 1=1 ";
+                    if (from.HasValue) where += " AND date(AppointmentDate)>=date(@from) ";
+                    if (to.HasValue) where += " AND date(AppointmentDate)<=date(@to) ";
+                    if (returnedOnly) where += " AND Status='Đã trả lịch' ";
+                    cmd.CommandText = "SELECT COUNT(*) FROM Appointments" + where;
+                    if (from.HasValue) cmd.Parameters.AddWithValue("@from", from.Value.ToString("yyyy-MM-dd"));
+                    if (to.HasValue) cmd.Parameters.AddWithValue("@to", to.Value.ToString("yyyy-MM-dd"));
+                    return Convert.ToInt32(cmd.ExecuteScalar());
+                }
+            }
+        }
+
+        public static int DeleteAppointments(DateTime? from, DateTime? to, bool returnedOnly)
+        {
+            using (var c = new SQLiteConnection(ConnectionString))
+            {
+                c.Open();
+                using (var tx = c.BeginTransaction())
+                using (var cmd = c.CreateCommand())
+                {
+                    cmd.Transaction = tx;
+                    string where = " WHERE 1=1 ";
+                    if (from.HasValue) where += " AND date(AppointmentDate)>=date(@from) ";
+                    if (to.HasValue) where += " AND date(AppointmentDate)<=date(@to) ";
+                    if (returnedOnly) where += " AND Status='Đã trả lịch' ";
+                    using (var log = c.CreateCommand())
+                    {
+                        log.Transaction = tx;
+                        log.CommandText = "DELETE FROM AuditLog WHERE AppointmentId IN (SELECT Id FROM Appointments" + where + ")";
+                        if (from.HasValue) log.Parameters.AddWithValue("@from", from.Value.ToString("yyyy-MM-dd"));
+                        if (to.HasValue) log.Parameters.AddWithValue("@to", to.Value.ToString("yyyy-MM-dd"));
+                        log.ExecuteNonQuery();
+                    }
+                    cmd.CommandText = "DELETE FROM Appointments" + where;
+                    if (from.HasValue) cmd.Parameters.AddWithValue("@from", from.Value.ToString("yyyy-MM-dd"));
+                    if (to.HasValue) cmd.Parameters.AddWithValue("@to", to.Value.ToString("yyyy-MM-dd"));
+                    int count = cmd.ExecuteNonQuery();
+                    tx.Commit();
+                    return count;
+                }
+            }
+        }
+
+        public static int DeleteAppointment(long id)
+        {
+            using (var c = new SQLiteConnection(ConnectionString))
+            {
+                c.Open();
+                using (var tx = c.BeginTransaction())
+                using (var cmd = c.CreateCommand())
+                {
+                    cmd.Transaction = tx;
+                    cmd.CommandText = "DELETE FROM Appointments WHERE Id=@id";
+                    cmd.Parameters.AddWithValue("@id", id);
+                    int count = cmd.ExecuteNonQuery();
+                    if (count > 0)
+                    {
+                        using (var log = c.CreateCommand())
+                        {
+                            log.Transaction = tx;
+                            log.CommandText = "DELETE FROM AuditLog WHERE AppointmentId=@id";
+                            log.Parameters.AddWithValue("@id", id);
+                            log.ExecuteNonQuery();
+                        }
+                    }
+                    tx.Commit();
+                    return count;
+                }
+            }
+        }
+
         public static void Return(long id)
         {
             using (var c = new SQLiteConnection(ConnectionString))
