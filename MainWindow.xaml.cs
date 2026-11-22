@@ -1593,6 +1593,67 @@ namespace PatientAppointmentManager
                 ShowAppMessage("Không thể trả lịch.\n\n" + ex.Message);
             }
         }
+        private void ShowTemporarySuccess(string message, Window owner = null)
+        {
+            // Thong bao thanh cong dang gon, tu dong dong sau 1 giay.
+            var notice = new Window
+            {
+                Title = "Thành công",
+                Width = 360,
+                SizeToContent = SizeToContent.Height,
+                ResizeMode = ResizeMode.NoResize,
+                WindowStyle = WindowStyle.None,
+                AllowsTransparency = true,
+                Background = System.Windows.Media.Brushes.Transparent,
+                ShowInTaskbar = false,
+                Owner = owner ?? this,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Topmost = true
+            };
+
+            var border = new Border
+            {
+                Background = new System.Windows.Media.SolidColorBrush(
+                    System.Windows.Media.Color.FromRgb(245, 252, 250)),
+                BorderBrush = new System.Windows.Media.SolidColorBrush(
+                    System.Windows.Media.Color.FromRgb(20, 145, 130)),
+                BorderThickness = new Thickness(1.5),
+                CornerRadius = new CornerRadius(14),
+                Padding = new Thickness(22)
+            };
+
+            var panel = new StackPanel();
+            panel.Children.Add(new TextBlock
+            {
+                Text = "Đã tạo lịch hẹn",
+                FontSize = 17,
+                FontWeight = FontWeights.Bold,
+                Foreground = new System.Windows.Media.SolidColorBrush(
+                    System.Windows.Media.Color.FromRgb(12, 65, 70)),
+                Margin = new Thickness(0, 0, 0, 8)
+            });
+            panel.Children.Add(new TextBlock
+            {
+                Text = message,
+                FontSize = 14,
+                TextWrapping = TextWrapping.Wrap,
+                Foreground = new System.Windows.Media.SolidColorBrush(
+                    System.Windows.Media.Color.FromRgb(45, 65, 68))
+            });
+            border.Child = panel;
+            notice.Content = border;
+
+            var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            timer.Tick += (s, e) =>
+            {
+                timer.Stop();
+                notice.Close();
+            };
+            notice.Closed += (s, e) => timer.Stop();
+            notice.Show();
+            timer.Start();
+        }
+
         private static MessageBoxResult ShowAppMessage(string message)
         { return ShowAppMessage(null, message, "Thông báo", MessageBoxButton.OK, MessageBoxImage.Information); }
         private static MessageBoxResult ShowAppMessage(string message, string caption)

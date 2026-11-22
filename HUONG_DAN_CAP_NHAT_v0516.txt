@@ -1,0 +1,7 @@
+SOHENCT v0.5.16 - FIX BUILD
+
+- Khac phuc loi CS0103: bo sung ham ShowTemporarySuccess dang bi thieu.
+- Thong bao tao lich thanh cong dung giao dien gon, dong tu dong sau 1 giay.
+- Giu nguyen cac thay doi cua v0.5.15.
+
+Can chay lai GitHub Actions de xac nhan build. Canh bao NU1903 ve goi CefSharp.Wpf 109.1.110 la canh bao bao mat rieng, khong phai loi lam build that bai trong log vua gui.
