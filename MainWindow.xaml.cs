@@ -734,16 +734,20 @@ namespace PatientAppointmentManager
                     x.ServiceName.TrimEnd('.', '…').Length <= 0 || x.ServiceName.EndsWith("...", StringComparison.Ordinal));
                 // Chỉ cảnh báo khi người dùng chủ động bấm Quét DS.
                 // Một lượt quét chỉ hiện một cảnh báo, các dòng trùng còn lại vẫn được đánh dấu trong bảng.
-                var duplicate = results.FirstOrDefault(x => x.ExistingAppointmentId > 0);
-                if (duplicate != null)
+                // Nếu trang có nhiều bệnh nhân, luôn hiển thị bảng kết quả để
+                // người dùng xem và chọn đúng dòng. Chỉ dùng hộp thoại trùng lịch
+                // rút gọn khi lượt quét chỉ có duy nhất một bệnh nhân.
+                if (results.Count == 1)
                 {
-                    var savedAppointment = Database.FindLatestAppointment(duplicate.PatientCode, duplicate.ReceiptCode);
-                    if (savedAppointment != null)
+                    var duplicate = results[0];
+                    if (duplicate.ExistingAppointmentId > 0)
                     {
-                        ShowDuplicateNotice(duplicate, savedAppointment);
-                        // Đã xử lý trực tiếp tại hộp thoại trùng lịch. Không mở thêm
-                        // bảng kết quả quét, tránh buộc người dùng phải đóng lần thứ hai.
-                        return;
+                        var savedAppointment = Database.FindLatestAppointment(duplicate.PatientCode, duplicate.ReceiptCode);
+                        if (savedAppointment != null)
+                        {
+                            ShowDuplicateNotice(duplicate, savedAppointment);
+                            return;
+                        }
                     }
                 }
                 ShowHospitalScanResults(results);
@@ -816,15 +820,10 @@ namespace PatientAppointmentManager
                     var match=Database.FindActiveAppointment(selected.PatientCode,selected.ReceiptCode);
                     if(match!=null){selected.ExistingAppointmentId=match.Id;selected.ExistingAppointmentDate=match.AppointmentDate.ToString("dd/MM/yyyy");selected.ExistingShift=match.Shift;}
                     grid.Items.Refresh(); LoadAppointments();
-                    var successMessage = "Đã tạo lịch hẹn cho " + selected.PatientName + ".";
-                    // Đóng hộp thoại quét trước, sau đó mới hiện thông báo.
-                    // Tránh Windows chuyển Focus sang ứng dụng khác khi cửa sổ modal kết thúc.
+                    // Không bật thông báo nổi sau khi tạo lịch: tránh Windows
+                    // chuyển Focus hoặc thu nhỏ cửa sổ ứng dụng khi popup tự đóng.
+                    // Cửa sổ kết quả đóng lại và trả người dùng về màn hình làm việc.
                     window.Close();
-                    Dispatcher.BeginInvoke(new Action(() =>
-                    {
-                        RestoreMainWindowFocus();
-                        ShowTemporarySuccess(successMessage, this);
-                    }), DispatcherPriority.Background);
                 }
             };
             var closeButton = new Button { Content="Đóng", MinWidth=90, Height=42, Padding=new Thickness(12,8,12,8) }; closeButton.Click += (s,e)=>window.Close();
@@ -1629,72 +1628,6 @@ namespace PatientAppointmentManager
             {
                 // Không để lỗi khôi phục Focus làm gián đoạn thao tác tạo lịch.
             }
-        }
-
-        private void ShowTemporarySuccess(string message, Window owner = null)
-        {
-            // Thong bao thanh cong dang gon, tu dong dong sau 1 giay.
-            var notice = new Window
-            {
-                Title = "Thành công",
-                Width = 360,
-                SizeToContent = SizeToContent.Height,
-                ResizeMode = ResizeMode.NoResize,
-                WindowStyle = WindowStyle.None,
-                AllowsTransparency = true,
-                Background = System.Windows.Media.Brushes.Transparent,
-                ShowInTaskbar = false,
-                Owner = owner ?? this,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                Topmost = true
-            };
-
-            var border = new Border
-            {
-                Background = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(245, 252, 250)),
-                BorderBrush = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(20, 145, 130)),
-                BorderThickness = new Thickness(1.5),
-                CornerRadius = new CornerRadius(14),
-                Padding = new Thickness(22)
-            };
-
-            var panel = new StackPanel();
-            panel.Children.Add(new TextBlock
-            {
-                Text = "Đã tạo lịch hẹn",
-                FontSize = 17,
-                FontWeight = FontWeights.Bold,
-                Foreground = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(12, 65, 70)),
-                Margin = new Thickness(0, 0, 0, 8)
-            });
-            panel.Children.Add(new TextBlock
-            {
-                Text = message,
-                FontSize = 14,
-                TextWrapping = TextWrapping.Wrap,
-                Foreground = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromRgb(45, 65, 68))
-            });
-            border.Child = panel;
-            notice.Content = border;
-
-            var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-            timer.Tick += (s, e) =>
-            {
-                timer.Stop();
-                notice.Close();
-            };
-            notice.Closed += (s, e) =>
-            {
-                timer.Stop();
-                // Khi thông báo tự đóng, trả Focus về cửa sổ SoHenCT.
-                Dispatcher.BeginInvoke(new Action(RestoreMainWindowFocus), DispatcherPriority.Background);
-            };
-            notice.Show();
-            timer.Start();
         }
 
         private static MessageBoxResult ShowAppMessage(string message)
