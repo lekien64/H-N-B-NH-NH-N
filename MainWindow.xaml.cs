@@ -21,45 +21,23 @@ namespace PatientAppointmentManager
 {
     public partial class MainWindow : Window
     {
-        private readonly DispatcherTimer _autoDuplicateTimer = new DispatcherTimer();
-        private bool _autoDuplicateCheckRunning;
-        private readonly HashSet<string> _autoVisiblePairs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
         public MainWindow()
         {
             InitializeComponent();
 
             Database.Initialize();
-            UpdateSidebarSelection("browser");
+            UpdateSidebarSelection("add");
 
             AppointmentDatePicker.SelectedDate = DateTime.Today.AddDays(1);
             FromDatePicker.SelectedDate = DateTime.Today;
             ToDatePicker.SelectedDate = DateTime.Today;
 
-            RegisterBrowser(HospitalBrowser);
-            LoadBrowserHistory(UrlBox);
+            RegisterBrowser(AddHospitalBrowser);
             LoadBrowserHistory(AddUrlBox);
-
-            AddHospitalBrowser.FrameLoadEnd += (sender, args) =>
-            {
-                if (args.Frame.IsMain)
-                    Dispatcher.BeginInvoke(new Action(() =>
-                    {
-                        AddUrlBox.Text = args.Url;
-                        SaveVisitedAddress(args.Url, AddUrlBox);
-                    }));
-            };
-
-            // Theo dõi nhẹ hai trình duyệt: tự đối chiếu cặp Mã BN + Số phiếu
-            // khi bảng kết quả tìm kiếm hoặc bảng chỉ định được tải/cập nhật.
-            _autoDuplicateTimer.Interval = TimeSpan.FromMilliseconds(1400);
-            _autoDuplicateTimer.Tick += AutoDuplicateTimer_Tick;
-            _autoDuplicateTimer.Start();
         }
 
         private void ShowView(string name)
         {
-            BrowserView.Visibility = name == "browser" ? Visibility.Visible : Visibility.Collapsed;
             AddView.Visibility = name == "add" ? Visibility.Visible : Visibility.Collapsed;
             ListView.Visibility = name == "list" ? Visibility.Visible : Visibility.Collapsed;
 
@@ -70,7 +48,6 @@ namespace PatientAppointmentManager
 
         private void UpdateSidebarSelection(string selected)
         {
-            SetNavButtonState(BrowserNavButton, selected == "browser");
             SetNavButtonState(AddNavButton, selected == "add");
             SetNavButtonState(ListNavButton, selected == "list");
         }
@@ -92,7 +69,7 @@ namespace PatientAppointmentManager
             get
             {
                 var item = BrowserTabsControl.SelectedItem as TabItem;
-                return item == null ? HospitalBrowser : item.Content as ChromiumWebBrowser;
+                return item == null ? AddHospitalBrowser : item.Content as ChromiumWebBrowser;
             }
         }
 
@@ -104,8 +81,8 @@ namespace PatientAppointmentManager
                 Dispatcher.BeginInvoke(new Action(() =>
                 {
                     if (ReferenceEquals(browser, ActiveBrowser))
-                        UrlBox.Text = args.Url;
-                    SaveVisitedAddress(args.Url, UrlBox);
+                        AddUrlBox.Text = args.Url;
+                    SaveVisitedAddress(args.Url, AddUrlBox);
                 }));
             };
         }
@@ -139,7 +116,7 @@ namespace PatientAppointmentManager
             if (!IsLoaded || e.Source != BrowserTabsControl) return;
             var browser = ActiveBrowser;
             if (browser != null)
-                UrlBox.Text = browser.Address ?? string.Empty;
+                AddUrlBox.Text = browser.Address ?? string.Empty;
         }
 
         private void NewBrowserTab_Click(object sender, RoutedEventArgs e)
@@ -159,11 +136,10 @@ namespace PatientAppointmentManager
             header.Children.Add(close);
             BrowserTabsControl.Items.Add(tab);
             BrowserTabsControl.SelectedItem = tab;
-            UrlBox.Text = string.Empty;
-            UrlBox.Focus();
+            AddUrlBox.Text = string.Empty;
+            AddUrlBox.Focus();
         }
 
-        private void BrowserTab_Click(object sender, RoutedEventArgs e) => ShowView("browser");
         private void AddTab_Click(object sender, RoutedEventArgs e) => ShowView("add");
         private void ListTab_Click(object sender, RoutedEventArgs e) => ShowView("list");
 
@@ -190,11 +166,6 @@ namespace PatientAppointmentManager
             return true;
         }
 
-        private void UrlBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
-        {
-            if (UrlBox.Items.Count > 0) UrlBox.IsDropDownOpen = true;
-        }
-
         private void AddUrlBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
         {
             if (AddUrlBox.Items.Count > 0) AddUrlBox.IsDropDownOpen = true;
@@ -218,29 +189,14 @@ namespace PatientAppointmentManager
             box.IsDropDownOpen = false;
             box.Dispatcher.BeginInvoke(new Action(() => box.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next))), System.Windows.Threading.DispatcherPriority.Input);
 
-            if (box == UrlBox)
+            if (box == AddUrlBox)
             {
                 string normalized;
                 if (TryGetWebAddress(address, out normalized) && ActiveBrowser != null)
                     ActiveBrowser.Address = normalized;
             }
-            else if (box == AddUrlBox)
-            {
-                string normalized;
-                if (TryGetWebAddress(address, out normalized))
-                    AddHospitalBrowser.Address = normalized;
-            }
 
             e.Handled = true;
-        }
-
-        private void UrlBox_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.Key == Key.Enter)
-            {
-                e.Handled = true;
-                OpenUrl_Click(sender, new RoutedEventArgs());
-            }
         }
 
         private void AddUrlBox_KeyDown(object sender, KeyEventArgs e)
@@ -256,7 +212,7 @@ namespace PatientAppointmentManager
         {
             string address;
 
-            if (!TryGetWebAddress(UrlBox.Text, out address))
+            if (!TryGetWebAddress(AddUrlBox.Text, out address))
             {
                 ShowAppMessage("Địa chỉ website không hợp lệ.");
                 return;
@@ -282,7 +238,7 @@ namespace PatientAppointmentManager
 
         private ChromiumWebBrowser CredentialBrowser
         {
-            get { return AddView.Visibility == Visibility.Visible ? AddHospitalBrowser : ActiveBrowser; }
+            get { return ActiveBrowser; }
         }
 
         private string CurrentBrowserHost()
@@ -385,9 +341,9 @@ namespace PatientAppointmentManager
         private void BrowserFit_Click(object sender, RoutedEventArgs e) { if (ActiveBrowser != null) ActiveBrowser.ZoomLevel = 0; }
         private void BrowserZoomIn_Click(object sender, RoutedEventArgs e) { if (ActiveBrowser != null) ActiveBrowser.ZoomLevel = Math.Min(5, ActiveBrowser.ZoomLevel + 0.5); }
         private void BrowserZoomOut_Click(object sender, RoutedEventArgs e) { if (ActiveBrowser != null) ActiveBrowser.ZoomLevel = Math.Max(-5, ActiveBrowser.ZoomLevel - 0.5); }
-        private void AddBrowserFit_Click(object sender, RoutedEventArgs e) { AddHospitalBrowser.ZoomLevel = 0; }
-        private void AddBrowserZoomIn_Click(object sender, RoutedEventArgs e) { AddHospitalBrowser.ZoomLevel = Math.Min(5, AddHospitalBrowser.ZoomLevel + 0.5); }
-        private void AddBrowserZoomOut_Click(object sender, RoutedEventArgs e) { AddHospitalBrowser.ZoomLevel = Math.Max(-5, AddHospitalBrowser.ZoomLevel - 0.5); }
+        private void AddBrowserFit_Click(object sender, RoutedEventArgs e) { BrowserFit_Click(sender, e); }
+        private void AddBrowserZoomIn_Click(object sender, RoutedEventArgs e) { BrowserZoomIn_Click(sender, e); }
+        private void AddBrowserZoomOut_Click(object sender, RoutedEventArgs e) { BrowserZoomOut_Click(sender, e); }
 
         private void AddOpenUrl_Click(object sender, RoutedEventArgs e)
         {
@@ -399,22 +355,22 @@ namespace PatientAppointmentManager
                 return;
             }
 
-            AddHospitalBrowser.Address = address;
+            ActiveBrowser.Address = address;
         }
 
         private void AddBack_Click(object sender, RoutedEventArgs e)
         {
-            if (AddHospitalBrowser.CanGoBack) AddHospitalBrowser.Back();
+            if (ActiveBrowser != null && ActiveBrowser.CanGoBack) ActiveBrowser.Back();
         }
 
         private void AddForward_Click(object sender, RoutedEventArgs e)
         {
-            if (AddHospitalBrowser.CanGoForward) AddHospitalBrowser.Forward();
+            if (ActiveBrowser != null && ActiveBrowser.CanGoForward) ActiveBrowser.Forward();
         }
 
         private void AddReload_Click(object sender, RoutedEventArgs e)
         {
-            AddHospitalBrowser.Reload();
+            if (ActiveBrowser != null) ActiveBrowser.Reload();
         }
 
         private sealed class HospitalScanRow
@@ -629,78 +585,7 @@ namespace PatientAppointmentManager
  return JSON.stringify(result);
 })()";
 
-        private async void AutoDuplicateTimer_Tick(object sender, EventArgs e)
-        {
-            if (_autoDuplicateCheckRunning || !IsLoaded) return;
-            _autoDuplicateCheckRunning = true;
-            try
-            {
-                var browsers = new List<ChromiumWebBrowser>();
-                if (AddHospitalBrowser != null) browsers.Add(AddHospitalBrowser);
-                foreach (TabItem tab in BrowserTabsControl.Items)
-                {
-                    var browser = tab.Content as ChromiumWebBrowser;
-                    if (browser != null && !browsers.Contains(browser)) browsers.Add(browser);
-                }
-
-                var currentlyVisible = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                bool noticeShown = false;
-                foreach (var browser in browsers)
-                {
-                    if (browser == null || !browser.IsBrowserInitialized) continue;
-                    var frame = browser.GetMainFrame();
-                    if (frame == null || !frame.IsValid) continue;
-                    var response = await frame.EvaluateScriptAsync(AutoDetectAppointmentPairsScript);
-                    if (!response.Success || response.Result == null) continue;
-                    var json = Convert.ToString(response.Result);
-                    var items = new JavaScriptSerializer().Deserialize<System.Collections.ArrayList>(json);
-                    if (items == null) continue;
-                    foreach (var item in items)
-                    {
-                        var d = item as Dictionary<string, object>;
-                        if (d == null) continue;
-                        string patient = GetScanValue(d, "patientCode");
-                        string receipt = GetScanValue(d, "receiptCode");
-                        if (string.IsNullOrWhiteSpace(patient) || string.IsNullOrWhiteSpace(receipt)) continue;
-                        string key = patient.Trim() + "|" + receipt.Trim();
-                        currentlyVisible.Add(key);
-                        if (_autoVisiblePairs.Contains(key)) continue;
-
-                        var saved = Database.FindLatestAppointment(patient, receipt);
-                        if (saved == null) continue;
-                        var row = new HospitalScanRow
-                        {
-                            PatientCode = patient,
-                            ReceiptCode = receipt,
-                            PatientName = GetScanValue(d, "patientName"),
-                            Department = GetScanValue(d, "department"),
-                            ServiceName = GetScanValue(d, "serviceName"),
-                            Age = GetScanValue(d, "age"),
-                            InjectionStatus = string.IsNullOrWhiteSpace(saved.InjectionStatus) ? "Chưa xác định" : saved.InjectionStatus,
-                            Status = saved.Status == "Đã hẹn" ? "ĐÃ CÓ LỊCH" : "ĐÃ TRẢ HẸN",
-                            ExistingAppointmentId = saved.Id,
-                            ExistingAppointmentDate = saved.AppointmentDate.ToString("dd/MM/yyyy"),
-                            ExistingShift = saved.Shift
-                        };
-                        if (string.IsNullOrWhiteSpace(row.PatientName)) row.PatientName = saved.PatientName;
-                        if (string.IsNullOrWhiteSpace(row.Department)) row.Department = saved.Department;
-                        if (string.IsNullOrWhiteSpace(row.ServiceName)) row.ServiceName = saved.ServiceName;
-                        _autoVisiblePairs.Add(key);
-                        ShowAutomaticDuplicateNotice(row, saved);
-                        noticeShown = true;
-                        // Mỗi lượt chỉ mở một hộp thoại, tránh chồng nhiều cảnh báo.
-                        break;
-                    }
-                    if (noticeShown) break;
-                }
-                // Khi cặp mã rời khỏi kết quả, lần xuất hiện tiếp theo được phép cảnh báo lại.
-                _autoVisiblePairs.RemoveWhere(k => !currentlyVisible.Contains(k));
-            }
-            catch { /* Tự phát hiện không được làm gián đoạn thao tác trên website. */ }
-            finally { _autoDuplicateCheckRunning = false; }
-        }
-
-        private void ShowAutomaticDuplicateNotice(HospitalScanRow row, Appointment saved)
+        private void ShowDuplicateNotice(HospitalScanRow row, Appointment saved)
         {
             bool active = saved.Status == "Đã hẹn";
             string message = "Phần mềm phát hiện bệnh nhân đã có dữ liệu lịch hẹn trùng theo Mã BN + Số phiếu.\n\n" +
@@ -710,29 +595,27 @@ namespace PatientAppointmentManager
                 "Ngày hẹn đã lưu: " + saved.AppointmentDate.ToString("dd/MM/yyyy") + "\n" +
                 "Buổi: " + saved.Shift + "\n\n" +
                 (active ? "Bạn có muốn đổi lịch hẹn này ngay không?" : "Lịch cũ đã trả hẹn. Bạn có muốn tạo lịch hẹn mới không?");
-            var answer = ShowAppMessage(message, "Tự động phát hiện trùng lịch",
+            var answer = ShowAppMessage(message, "Phát hiện bệnh nhân đã có lịch",
                 MessageBoxButton.YesNo, MessageBoxImage.Warning);
             if (answer != MessageBoxResult.Yes) return;
-            if (active)
-            {
-                ChangeAppointmentFromScan(row, this);
-            }
-            else
-            {
-                CreateAppointmentFromScan(row, this);
-            }
+
+            bool updated = active
+                ? ChangeAppointmentFromScan(row, this)
+                : CreateAppointmentFromScan(row, this);
+            if (updated)
+                LoadAppointments();
         }
 
         private async void ScanHospitalList_Click(object sender, RoutedEventArgs e)
         {
-            if (AddHospitalBrowser == null || !AddHospitalBrowser.IsBrowserInitialized)
+            if (ActiveBrowser == null || !ActiveBrowser.IsBrowserInitialized)
             {
                 ShowAppMessage("Trình duyệt bệnh viện chưa sẵn sàng.", "Quét danh sách");
                 return;
             }
             try
             {
-                var frame = AddHospitalBrowser.GetMainFrame();
+                var frame = ActiveBrowser.GetMainFrame();
                 if (frame == null || !frame.IsValid) { ShowAppMessage("Không đọc được trang hiện tại."); return; }
                 var response = await frame.EvaluateScriptAsync(HospitalScanScript);
                 if (!response.Success || response.Result == null)
@@ -772,17 +655,26 @@ namespace PatientAppointmentManager
                 }
                 int incompleteServices = results.Count(x => string.IsNullOrWhiteSpace(x.ServiceName) ||
                     x.ServiceName.TrimEnd('.', '…').Length <= 0 || x.ServiceName.EndsWith("...", StringComparison.Ordinal));
-                // Quét thủ công cũng phải cảnh báo ngay khi phát hiện cặp mã đã có lịch.
-                var duplicates = results.Where(x => x.ExistingAppointmentId > 0).ToList();
-                foreach (var duplicateRow in duplicates)
-                    _autoVisiblePairs.Add(duplicateRow.PatientCode.Trim() + "|" + duplicateRow.ReceiptCode.Trim());
-                var duplicate = duplicates.FirstOrDefault();
+                // Chỉ cảnh báo khi người dùng chủ động bấm Quét DS.
+                // Một lượt quét chỉ hiện một cảnh báo, các dòng trùng còn lại vẫn được đánh dấu trong bảng.
+                var duplicate = results.FirstOrDefault(x => x.ExistingAppointmentId > 0);
                 if (duplicate != null)
                 {
                     var savedAppointment = Database.FindLatestAppointment(duplicate.PatientCode, duplicate.ReceiptCode);
                     if (savedAppointment != null)
                     {
-                        ShowAutomaticDuplicateNotice(duplicate, savedAppointment);
+                        ShowDuplicateNotice(duplicate, savedAppointment);
+                        // Nếu người dùng vừa đổi lịch hoặc tạo lại lịch, đồng bộ trạng thái
+                        // ngay trên bảng kết quả của lượt quét hiện tại.
+                        var activeAfterAction = Database.FindActiveAppointment(
+                            duplicate.PatientCode, duplicate.ReceiptCode);
+                        if (activeAfterAction != null)
+                        {
+                            duplicate.Status = "ĐÃ CÓ LỊCH";
+                            duplicate.ExistingAppointmentId = activeAfterAction.Id;
+                            duplicate.ExistingAppointmentDate = activeAfterAction.AppointmentDate.ToString("dd/MM/yyyy");
+                            duplicate.ExistingShift = activeAfterAction.Shift;
+                        }
                     }
                 }
                 ShowHospitalScanResults(results);
@@ -1181,7 +1073,7 @@ namespace PatientAppointmentManager
 
         private async void InspectAddDom_Click(object sender, RoutedEventArgs e)
         {
-            await InspectBrowserDomAsync(AddHospitalBrowser, "Trình duyệt thêm lịch");
+            await InspectBrowserDomAsync(ActiveBrowser, "Trình duyệt thêm lịch");
         }
 
         private void AddAppointment_Click(object sender, RoutedEventArgs e)

@@ -16,7 +16,7 @@
    <ColumnDefinition Width="*"/>
   </Grid.ColumnDefinitions>
 
-  <!-- SIDEBAR: cố định, chỉ hiển thị ba biểu tượng điều hướng -->
+  <!-- SIDEBAR: trình duyệt/quét danh sách và lịch đã hẹn -->
   <Border x:Name="Sidebar" Grid.Column="0" Background="#153D49">
    <StackPanel Margin="7,18,7,0">
     <StackPanel.Resources>
@@ -38,8 +38,7 @@
       </ControlTemplate></Setter.Value></Setter>
      </Style>
     </StackPanel.Resources>
-    <Button x:Name="BrowserNavButton" Content="🌐" ToolTip="Trình duyệt" Click="BrowserTab_Click" Style="{StaticResource SidebarIconButton}"/>
-    <Button x:Name="AddNavButton" Content="＋" ToolTip="Thêm lịch hẹn" Click="AddTab_Click" Style="{StaticResource SidebarIconButton}" FontSize="31"/>
+    <Button x:Name="AddNavButton" Content="🌐" ToolTip="Trình duyệt và quét danh sách" Click="AddTab_Click" Style="{StaticResource SidebarIconButton}"/>
     <Button x:Name="ListNavButton" Content="▦" ToolTip="Lịch đã hẹn" Click="ListTab_Click" Style="{StaticResource SidebarIconButton}" FontSize="32"/>
    </StackPanel>
   </Border>
@@ -47,65 +46,8 @@
   <Grid Grid.Column="1" Margin="20">
    <Grid.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#F4FAFA" Offset="0"/><GradientStop Color="#E6F1F2" Offset="1"/></LinearGradientBrush></Grid.Background>
 
-   <!-- TAB 1: TRÌNH DUYỆT -->
-   <Grid x:Name="BrowserView" Visibility="Visible">
-    <Grid.RowDefinitions>
-     <RowDefinition Height="Auto"/>
-     <RowDefinition Height="Auto"/>
-     <RowDefinition Height="*"/>
-    </Grid.RowDefinitions>
-
-    <StackPanel Grid.Row="0">
-     <TextBlock Text="Trình duyệt"
-                FontSize="21"
-                FontWeight="Bold"
-                Foreground="#18333D"/>
-    </StackPanel>
-
-    <DockPanel Grid.Row="1" Height="40" Margin="0,0,0,8" LastChildFill="True" VerticalAlignment="Center">
-     <Button Content="Mở" Width="58" Height="32" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" VerticalAlignment="Center" DockPanel.Dock="Right" Click="OpenUrl_Click"/>
-     <Button Width="36" Height="34" Padding="0" Margin="0,0,5,0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" DockPanel.Dock="Right" ToolTip="Vừa màn hình" Click="BrowserFit_Click">
-      <TextBlock Text="⛶" FontSize="23" FontWeight="Normal" VerticalAlignment="Center" HorizontalAlignment="Center" LineHeight="24"/>
-     </Button>
-     <Button Width="36" Height="34" Padding="0" Margin="0,0,4,0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" DockPanel.Dock="Right" ToolTip="Phóng to trang" Click="BrowserZoomIn_Click">
-      <Grid Width="25" Height="25">
-       <Ellipse Width="16" Height="16" Stroke="#17434B" StrokeThickness="2" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1,1,0,0"/>
-       <Path Data="M 14,14 L 23,23" Stroke="#17434B" StrokeThickness="2.5" StrokeStartLineCap="Round"/>
-       <TextBlock Text="+" FontSize="12" FontWeight="Bold" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="4,0,0,0"/>
-      </Grid>
-     </Button>
-     <Button Width="36" Height="34" Padding="0" Margin="0,0,5,0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" DockPanel.Dock="Right" ToolTip="Thu nhỏ trang" Click="BrowserZoomOut_Click">
-      <Grid Width="25" Height="25">
-       <Ellipse Width="16" Height="16" Stroke="#17434B" StrokeThickness="2" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="1,1,0,0"/>
-       <Path Data="M 14,14 L 23,23" Stroke="#17434B" StrokeThickness="2.5" StrokeStartLineCap="Round"/>
-       <TextBlock Text="−" FontSize="13" FontWeight="Bold" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="4,0,0,0"/>
-      </Grid>
-     </Button>
-     <ComboBox x:Name="UrlBox" IsEditable="True" IsTextSearchEnabled="False" StaysOpenOnEdit="True"
-               KeyDown="UrlBox_KeyDown" GotKeyboardFocus="UrlBox_GotKeyboardFocus" Height="34" VerticalAlignment="Center" Padding="8" VerticalContentAlignment="Center">
-      <ComboBox.ItemContainerStyle>
-       <Style TargetType="ComboBoxItem">
-        <EventSetter Event="PreviewMouseLeftButtonUp" Handler="HistoryItem_MouseLeftButtonUp"/>
-       </Style>
-      </ComboBox.ItemContainerStyle>
-     </ComboBox>
-    </DockPanel>
-    <Border Grid.Row="2" Background="White" CornerRadius="15" BorderBrush="#D5E7E8" BorderThickness="1" ClipToBounds="True">
-     <Grid>
-      <TabControl x:Name="BrowserTabsControl" Margin="0,0,44,0" SelectionChanged="BrowserTabsControl_SelectionChanged">
-       <TabItem Header="Trang 1">
-        <cef:ChromiumWebBrowser x:Name="HospitalBrowser" Address="about:blank"/>
-       </TabItem>
-      </TabControl>
-      <Button Content="＋" ToolTip="Mở tab mới" Width="34" Height="27"
-              HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,3,6,0"
-              Padding="0" FontSize="19" Click="NewBrowserTab_Click" Panel.ZIndex="2"/>
-     </Grid>
-    </Border>
-   </Grid>
-
-   <!-- TAB 2: THÊM LỊCH -->
-   <Grid x:Name="AddView" Visibility="Collapsed">
+   <!-- TRÌNH DUYỆT NHIỀU THẺ VÀ NHẬP LỊCH -->
+   <Grid x:Name="AddView" Visibility="Visible">
     <Grid.RowDefinitions>
      <RowDefinition Height="Auto"/>
      <RowDefinition Height="*"/>
@@ -113,7 +55,7 @@
     </Grid.RowDefinitions>
 
     <StackPanel Grid.Row="0">
-     <TextBlock Text="Thêm lịch hẹn"
+     <TextBlock Text="Trình duyệt và quét danh sách"
                 FontSize="21"
                 FontWeight="Bold"
                 Foreground="#18333D"/>
@@ -161,7 +103,16 @@
              BorderBrush="#D5E7E8"
              BorderThickness="1"
              ClipToBounds="True">
-      <cef:ChromiumWebBrowser x:Name="AddHospitalBrowser" Address="about:blank"/>
+      <Grid>
+       <TabControl x:Name="BrowserTabsControl" Margin="0,0,44,0" SelectionChanged="BrowserTabsControl_SelectionChanged">
+        <TabItem Header="Trang 1">
+         <cef:ChromiumWebBrowser x:Name="AddHospitalBrowser" Address="about:blank"/>
+        </TabItem>
+       </TabControl>
+       <Button Content="＋" ToolTip="Mở tab mới" Width="34" Height="27"
+               HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,3,6,0"
+               Padding="0" FontSize="19" Click="NewBrowserTab_Click" Panel.ZIndex="2"/>
+      </Grid>
      </Border>
     </Grid>
 
@@ -247,7 +198,7 @@
     </Expander>
    </Grid>
 
-   <!-- TAB 3: LỊCH ĐÃ HẸN -->
+   <!-- LỊCH ĐÃ HẸN -->
    <Grid x:Name="ListView" Visibility="Collapsed">
     <Grid.RowDefinitions>
      <RowDefinition Height="Auto"/>
