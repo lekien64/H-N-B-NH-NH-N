@@ -1,0 +1,17 @@
+SOHENCT v0.5.17 - SUA LOI MAT FOCUS SAU THONG BAO TAO LICH
+
+Thay doi:
+- Dong bang ket qua quet truoc khi hien thong bao tao lich thanh cong.
+- Hien thong bao sau khi cua so quet da dong, tranh ket thuc cua so modal lam Windows kich hoat ung dung khac.
+- Khi thong bao tu dong dong sau 1 giay, goi lai Focus cho cua so SoHenCT.
+- Neu cua so SoHenCT dang bi minimize, khoi phuc lai cua so.
+- Khong tai lai trang web, khong thay doi URL, bo loc, noi dung tim kiem hoac vi tri cuon.
+
+Kiem tra:
+- Da kiem tra can bang dau ngoac trong MainWindow.xaml.cs.
+- Chua bien dich bang MSBuild va chua kiem thu truc tiep tren Windows.
+- Can chay GitHub Actions truoc khi cai de su dung.
+
+Luu y:
+- Cac lenh Win32 ShowWindow/SetForegroundWindow chi duoc goi de khoi phuc cua so SoHenCT.
+- Khong dat Topmost cho cua so chinh lau dai.

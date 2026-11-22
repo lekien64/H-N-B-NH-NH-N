@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Web.Script.Serialization;
 using System.Security.Cryptography;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -815,8 +816,15 @@ namespace PatientAppointmentManager
                     var match=Database.FindActiveAppointment(selected.PatientCode,selected.ReceiptCode);
                     if(match!=null){selected.ExistingAppointmentId=match.Id;selected.ExistingAppointmentDate=match.AppointmentDate.ToString("dd/MM/yyyy");selected.ExistingShift=match.Shift;}
                     grid.Items.Refresh(); LoadAppointments();
-                    ShowTemporarySuccess("Đã tạo lịch hẹn cho " + selected.PatientName + ".", this);
+                    var successMessage = "Đã tạo lịch hẹn cho " + selected.PatientName + ".";
+                    // Đóng hộp thoại quét trước, sau đó mới hiện thông báo.
+                    // Tránh Windows chuyển Focus sang ứng dụng khác khi cửa sổ modal kết thúc.
                     window.Close();
+                    Dispatcher.BeginInvoke(new Action(() =>
+                    {
+                        RestoreMainWindowFocus();
+                        ShowTemporarySuccess(successMessage, this);
+                    }), DispatcherPriority.Background);
                 }
             };
             var closeButton = new Button { Content="Đóng", MinWidth=90, Height=42, Padding=new Thickness(12,8,12,8) }; closeButton.Click += (s,e)=>window.Close();
@@ -1593,6 +1601,36 @@ namespace PatientAppointmentManager
                 ShowAppMessage("Không thể trả lịch.\n\n" + ex.Message);
             }
         }
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+        private void RestoreMainWindowFocus()
+        {
+            try
+            {
+                if (WindowState == WindowState.Minimized)
+                    WindowState = WindowState.Normal;
+
+                Show();
+                Activate();
+                Focus();
+
+                var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+                if (handle != IntPtr.Zero)
+                {
+                    ShowWindow(handle, 9); // SW_RESTORE
+                    SetForegroundWindow(handle);
+                }
+            }
+            catch
+            {
+                // Không để lỗi khôi phục Focus làm gián đoạn thao tác tạo lịch.
+            }
+        }
+
         private void ShowTemporarySuccess(string message, Window owner = null)
         {
             // Thong bao thanh cong dang gon, tu dong dong sau 1 giay.
@@ -1649,7 +1687,12 @@ namespace PatientAppointmentManager
                 timer.Stop();
                 notice.Close();
             };
-            notice.Closed += (s, e) => timer.Stop();
+            notice.Closed += (s, e) =>
+            {
+                timer.Stop();
+                // Khi thông báo tự đóng, trả Focus về cửa sổ SoHenCT.
+                Dispatcher.BeginInvoke(new Action(RestoreMainWindowFocus), DispatcherPriority.Background);
+            };
             notice.Show();
             timer.Start();
         }
