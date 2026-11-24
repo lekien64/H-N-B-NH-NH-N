@@ -1,0 +1,21 @@
+SOHENBN FULL 0.6.0 DOT 2 - FIX BUILD 1
+
+Loi build theo log GitHub Actions:
+CS0104: 'File' is an ambiguous reference between Google.Apis.Drive.v3.Data.File and System.IO.File.
+
+Da sua trong Services_GoogleDriveBackupService.cs:
+- File.Exists(clientJson) -> System.IO.File.Exists(clientJson)
+- File.OpenRead(path) -> System.IO.File.OpenRead(path)
+
+Khong thay doi logic nghiep vu hen benh nhan, schema SQLite hay cau hinh OAuth.
+
+Cach cap nhat:
+1. Giai nen ZIP nay.
+2. Thay toan bo ma nguon tren nhanh feature/v0.2-cefsharp-browser bang noi dung trong thu muc source.
+3. Khong commit file OAuth JSON hoac token.
+4. Chay lai GitHub Actions Build Windows Application.
+
+Gioi han xac nhan:
+- Da sua dung 2 vi tri CS0104 theo log.
+- Chua co MSBuild/.NET Framework build environment trong phien nay, nen chua xac nhan build thanh cong.
+- Neu con loi moi, gui log moi de xu ly tiep.

@@ -22,7 +22,7 @@ namespace PatientAppointmentManager
 
         public static async Task<GoogleDriveBackupService> ConnectAsync(string clientJson)
         {
-            if (string.IsNullOrWhiteSpace(clientJson) || !File.Exists(clientJson))
+            if (string.IsNullOrWhiteSpace(clientJson) || !System.IO.File.Exists(clientJson))
                 throw new FileNotFoundException("Không tìm thấy file OAuth client JSON.", clientJson);
             using (var stream = new FileStream(clientJson, FileMode.Open, FileAccess.Read, FileShare.Read))
             {
@@ -92,7 +92,7 @@ namespace PatientAppointmentManager
         public static string Sha256(string path)
         {
             using (var sha = SHA256.Create())
-            using (var stream = File.OpenRead(path))
+            using (var stream = System.IO.File.OpenRead(path))
                 return BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", "").ToLowerInvariant();
         }
     }
