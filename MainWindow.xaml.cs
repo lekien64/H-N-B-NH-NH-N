@@ -28,6 +28,7 @@ namespace PatientAppointmentManager
         public MainWindow()
         {
             InitializeComponent();
+            Loaded += MainWindow_PerformanceLoaded;
 
             Database.Initialize();
             LoadAppSettings();
@@ -102,7 +103,13 @@ namespace PatientAppointmentManager
                     AppointmentsGrid.EnableColumnVirtualization = true;
                     VirtualizingPanel.SetIsVirtualizing(AppointmentsGrid, true);
                     VirtualizingPanel.SetVirtualizationMode(AppointmentsGrid, VirtualizationMode.Recycling);
+                    ScrollViewer.SetCanContentScroll(AppointmentsGrid, true);
+                    ScrollViewer.SetIsDeferredScrollingEnabled(AppointmentsGrid, true);
                 }
+
+                // The visual tree is not fully created during the constructor.
+                // Flatten it after WPF has loaded the window so the low mode is visible.
+                if (IsLoaded) ApplyLowPerformanceVisuals(this);
             }
             else
             {
@@ -113,6 +120,76 @@ namespace PatientAppointmentManager
                         System.Windows.Media.Color.FromRgb(244, 250, 250),
                         System.Windows.Media.Color.FromRgb(230, 241, 242), 45);
             }
+        }
+
+        private void MainWindow_PerformanceLoaded(object sender, RoutedEventArgs e)
+        {
+            if (CurrentPerformanceMode == "low")
+                ApplyLowPerformanceVisuals(this);
+        }
+
+        private static void ApplyLowPerformanceVisuals(DependencyObject parent)
+        {
+            if (parent == null) return;
+
+            var border = parent as Border;
+            if (border != null)
+            {
+                border.CornerRadius = new CornerRadius(0);
+                border.Effect = null;
+                FlattenGradientBackground(border);
+            }
+
+            var ui = parent as UIElement;
+            if (ui != null) ui.Effect = null;
+
+            var control = parent as Control;
+            if (control != null)
+            {
+                control.Effect = null;
+                control.SnapsToDevicePixels = true;
+
+                var button = control as Button;
+                if (button != null)
+                {
+                    button.Padding = new Thickness(9, 5, 9, 5);
+                    button.BorderThickness = new Thickness(1);
+                }
+            }
+
+            var panel = parent as Panel;
+            if (panel != null) FlattenGradientBackground(panel);
+
+            int childCount = 0;
+            try { childCount = System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent); }
+            catch { return; }
+
+            for (int i = 0; i < childCount; i++)
+            {
+                try { ApplyLowPerformanceVisuals(System.Windows.Media.VisualTreeHelper.GetChild(parent, i)); }
+                catch { /* A non-visual WPF child must not prevent the window from opening. */ }
+            }
+        }
+
+        private static void FlattenGradientBackground(Border border)
+        {
+            var gradient = border.Background as System.Windows.Media.GradientBrush;
+            if (gradient != null && gradient.GradientStops.Count > 0)
+                border.Background = new System.Windows.Media.SolidColorBrush(gradient.GradientStops[0].Color);
+        }
+
+        private static void FlattenGradientBackground(Control control)
+        {
+            var gradient = control.Background as System.Windows.Media.GradientBrush;
+            if (gradient != null && gradient.GradientStops.Count > 0)
+                control.Background = new System.Windows.Media.SolidColorBrush(gradient.GradientStops[0].Color);
+        }
+
+        private static void FlattenGradientBackground(Panel panel)
+        {
+            var gradient = panel.Background as System.Windows.Media.GradientBrush;
+            if (gradient != null && gradient.GradientStops.Count > 0)
+                panel.Background = new System.Windows.Media.SolidColorBrush(gradient.GradientStops[0].Color);
         }
 
         private void SaveSettings_Click(object sender, RoutedEventArgs e)
