@@ -85,30 +85,41 @@ namespace PatientAppointmentManager
 
         private void ApplyPerformanceMode(string mode)
         {
-            CurrentPerformanceMode = mode;
-            bool low = mode == "low";
+            CurrentPerformanceMode = mode == "low" ? "low" : "high";
+            bool low = CurrentPerformanceMode == "low";
 
-            // Chế độ thấp ưu tiên tốc độ: nền phẳng, bỏ hiệu ứng trang trí,
-            // bật tái sử dụng hàng và ảo hóa. Không ẩn hoặc vô hiệu hóa chức năng.
+            if (AppointmentsGrid != null)
+            {
+                AppointmentsGrid.EnableRowVirtualization = true;
+                AppointmentsGrid.EnableColumnVirtualization = true;
+                VirtualizingPanel.SetIsVirtualizing(AppointmentsGrid, true);
+                VirtualizingPanel.SetVirtualizationMode(AppointmentsGrid, VirtualizationMode.Recycling);
+                ScrollViewer.SetCanContentScroll(AppointmentsGrid, true);
+                ScrollViewer.SetIsDeferredScrollingEnabled(AppointmentsGrid, true);
+            }
+
             if (low)
             {
-                Background = System.Windows.Media.Brushes.WhiteSmoke;
-                if (AddView != null) AddView.Background = System.Windows.Media.Brushes.WhiteSmoke;
-                if (ListView != null) ListView.Background = System.Windows.Media.Brushes.WhiteSmoke;
-                if (SettingsView != null) SettingsView.Background = System.Windows.Media.Brushes.WhiteSmoke;
-                if (MainContentPanel != null) MainContentPanel.Background = System.Windows.Media.Brushes.WhiteSmoke;
+                var classic = new System.Windows.Media.SolidColorBrush(
+                    System.Windows.Media.Color.FromRgb(240, 240, 240));
+                Background = classic;
+                if (Sidebar != null) Sidebar.Background = new System.Windows.Media.SolidColorBrush(
+                    System.Windows.Media.Color.FromRgb(224, 224, 224));
+                if (MainContentPanel != null) MainContentPanel.Background = System.Windows.Media.Brushes.White;
+                if (AddView != null) AddView.Background = System.Windows.Media.Brushes.White;
+                if (ListView != null) ListView.Background = System.Windows.Media.Brushes.White;
+                if (SettingsView != null) SettingsView.Background = System.Windows.Media.Brushes.White;
+
                 if (AppointmentsGrid != null)
                 {
-                    AppointmentsGrid.EnableRowVirtualization = true;
-                    AppointmentsGrid.EnableColumnVirtualization = true;
-                    VirtualizingPanel.SetIsVirtualizing(AppointmentsGrid, true);
-                    VirtualizingPanel.SetVirtualizationMode(AppointmentsGrid, VirtualizationMode.Recycling);
-                    ScrollViewer.SetCanContentScroll(AppointmentsGrid, true);
-                    ScrollViewer.SetIsDeferredScrollingEnabled(AppointmentsGrid, true);
+                    AppointmentsGrid.Background = System.Windows.Media.Brushes.White;
+                    AppointmentsGrid.RowBackground = System.Windows.Media.Brushes.White;
+                    AppointmentsGrid.AlternatingRowBackground = System.Windows.Media.Brushes.White;
+                    AppointmentsGrid.GridLinesVisibility = DataGridGridLinesVisibility.All;
+                    AppointmentsGrid.HorizontalGridLinesBrush = System.Windows.Media.Brushes.LightGray;
+                    AppointmentsGrid.VerticalGridLinesBrush = System.Windows.Media.Brushes.LightGray;
                 }
 
-                // The visual tree is not fully created during the constructor.
-                // Flatten it after WPF has loaded the window so the low mode is visible.
                 if (IsLoaded) ApplyLowPerformanceVisuals(this);
             }
             else
@@ -125,7 +136,14 @@ namespace PatientAppointmentManager
         private void MainWindow_PerformanceLoaded(object sender, RoutedEventArgs e)
         {
             if (CurrentPerformanceMode == "low")
-                ApplyLowPerformanceVisuals(this);
+            {
+                // Run after WPF has created control templates, so nested cards/buttons
+                // are flattened too, not only the first visible sidebar borders.
+                Dispatcher.BeginInvoke(new Action(delegate
+                {
+                    ApplyLowPerformanceVisuals(this);
+                }), DispatcherPriority.ApplicationIdle);
+            }
         }
 
         private static void ApplyLowPerformanceVisuals(DependencyObject parent)
@@ -137,28 +155,90 @@ namespace PatientAppointmentManager
             {
                 border.CornerRadius = new CornerRadius(0);
                 border.Effect = null;
+                border.BorderBrush = new System.Windows.Media.SolidColorBrush(
+                    System.Windows.Media.Color.FromRgb(160, 160, 160));
+                border.BorderThickness = new Thickness(1);
                 FlattenGradientBackground(border);
+                if (border.Background != null)
+                    border.Background = new System.Windows.Media.SolidColorBrush(
+                        System.Windows.Media.Color.FromRgb(240, 240, 240));
             }
 
             var ui = parent as UIElement;
             if (ui != null) ui.Effect = null;
+
+            var button = parent as Button;
+            if (button != null)
+            {
+                button.Effect = null;
+                button.Foreground = System.Windows.Media.Brushes.Black;
+                button.Background = new System.Windows.Media.SolidColorBrush(
+                    System.Windows.Media.Color.FromRgb(240, 240, 240));
+                button.BorderBrush = new System.Windows.Media.SolidColorBrush(
+                    System.Windows.Media.Color.FromRgb(128, 128, 128));
+                button.BorderThickness = new Thickness(1);
+                button.FontWeight = FontWeights.Normal;
+                button.Cursor = Cursors.Arrow;
+                button.Padding = new Thickness(8, 4, 8, 4);
+                button.Template = CreateClassicButtonTemplate();
+                // Do not walk into the newly assigned template. Its Border uses
+                // TemplateBinding and must retain the button's classic colors.
+                return;
+            }
 
             var control = parent as Control;
             if (control != null)
             {
                 control.Effect = null;
                 control.SnapsToDevicePixels = true;
-
-                var button = control as Button;
-                if (button != null)
+                if (control is TextBox || control is ComboBox || control is DatePicker)
                 {
-                    button.Padding = new Thickness(9, 5, 9, 5);
-                    button.BorderThickness = new Thickness(1);
+                    control.Background = System.Windows.Media.Brushes.White;
+                    control.Foreground = System.Windows.Media.Brushes.Black;
+                    control.BorderBrush = new System.Windows.Media.SolidColorBrush(
+                        System.Windows.Media.Color.FromRgb(128, 128, 128));
+                    control.BorderThickness = new Thickness(1);
                 }
+            }
+
+            var text = parent as TextBlock;
+            if (text != null)
+            {
+                text.Foreground = System.Windows.Media.Brushes.Black;
+                text.FontWeight = text.FontWeight == FontWeights.Bold ? FontWeights.Bold : FontWeights.Normal;
             }
 
             var panel = parent as Panel;
             if (panel != null) FlattenGradientBackground(panel);
+
+            var header = parent as DataGridColumnHeader;
+            if (header != null)
+            {
+                header.Background = new System.Windows.Media.SolidColorBrush(
+                    System.Windows.Media.Color.FromRgb(224, 224, 224));
+                header.Foreground = System.Windows.Media.Brushes.Black;
+                header.BorderBrush = new System.Windows.Media.SolidColorBrush(
+                    System.Windows.Media.Color.FromRgb(128, 128, 128));
+                header.FontWeight = FontWeights.Normal;
+                header.Padding = new Thickness(4, 3, 4, 3);
+            }
+
+            var grid = parent as DataGrid;
+            if (grid != null)
+            {
+                grid.Background = System.Windows.Media.Brushes.White;
+                grid.RowBackground = System.Windows.Media.Brushes.White;
+                grid.AlternatingRowBackground = System.Windows.Media.Brushes.White;
+                grid.BorderBrush = new System.Windows.Media.SolidColorBrush(
+                    System.Windows.Media.Color.FromRgb(128, 128, 128));
+                grid.BorderThickness = new Thickness(1);
+                grid.GridLinesVisibility = DataGridGridLinesVisibility.All;
+                grid.HorizontalGridLinesBrush = System.Windows.Media.Brushes.LightGray;
+                grid.VerticalGridLinesBrush = System.Windows.Media.Brushes.LightGray;
+                grid.FontSize = 12;
+                grid.RowHeight = 28;
+                grid.ColumnHeaderHeight = 30;
+            }
 
             int childCount = 0;
             try { childCount = System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent); }
@@ -169,6 +249,32 @@ namespace PatientAppointmentManager
                 try { ApplyLowPerformanceVisuals(System.Windows.Media.VisualTreeHelper.GetChild(parent, i)); }
                 catch { /* A non-visual WPF child must not prevent the window from opening. */ }
             }
+        }
+
+        private static ControlTemplate CreateClassicButtonTemplate()
+        {
+            var template = new ControlTemplate(typeof(Button));
+            var border = new FrameworkElementFactory(typeof(Border));
+            border.SetBinding(Border.BackgroundProperty,
+                new System.Windows.TemplateBindingExtension(Control.BackgroundProperty));
+            border.SetBinding(Border.BorderBrushProperty,
+                new System.Windows.TemplateBindingExtension(Control.BorderBrushProperty));
+            border.SetBinding(Border.BorderThicknessProperty,
+                new System.Windows.TemplateBindingExtension(Control.BorderThicknessProperty));
+            border.SetBinding(Border.PaddingProperty,
+                new System.Windows.TemplateBindingExtension(Control.PaddingProperty));
+            var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
+            presenter.SetBinding(ContentPresenter.ContentProperty,
+                new System.Windows.TemplateBindingExtension(ContentControl.ContentProperty));
+            presenter.SetBinding(ContentPresenter.ContentTemplateProperty,
+                new System.Windows.TemplateBindingExtension(ContentControl.ContentTemplateProperty));
+            presenter.SetBinding(ContentPresenter.HorizontalAlignmentProperty,
+                new System.Windows.TemplateBindingExtension(Control.HorizontalContentAlignmentProperty));
+            presenter.SetBinding(ContentPresenter.VerticalAlignmentProperty,
+                new System.Windows.TemplateBindingExtension(Control.VerticalContentAlignmentProperty));
+            border.AppendChild(presenter);
+            template.VisualTree = border;
+            return template;
         }
 
         private static void FlattenGradientBackground(Border border)

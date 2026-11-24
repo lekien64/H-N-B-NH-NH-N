@@ -1,0 +1,23 @@
+SO HEN BN - HIỆU NĂNG THẤP WINDOWS CLASSIC
+
+Mục tiêu:
+- Giao diện phẳng kiểu Windows Classic.
+- Loại bỏ bo góc, đổ bóng, nền chuyển màu và hiệu ứng trang trí.
+- Nút bấm vuông, nền xám cổ điển, chữ đen.
+- Các khung và đường viền dùng màu xám trung tính.
+- Bảng lịch dùng nền trắng, dòng xen kẽ không tô màu.
+- Chỉ giữ màu phân biệt nghiệp vụ trong bảng:
+  + Buổi Sáng / Chiều.
+  + Tiêm thuốc cản quang Có tiêm / Không tiêm.
+- Bật ảo hóa và tái sử dụng hàng của DataGrid.
+- Không ẩn hoặc vô hiệu hóa chức năng nghiệp vụ.
+
+Các chức năng tạo, sửa/đổi, trả lịch, quét bệnh nhân, lọc, sao lưu và khôi phục
+được giữ nguyên trong mã nguồn. Cần kiểm thử thực tế sau khi build để xác nhận.
+
+Cách áp dụng:
+1. Chọn "Hiệu năng thấp | Tối giản, ưu tiên tốc độ".
+2. Nhấn Lưu cấu hình.
+3. Thoát hoàn toàn SoHenBN rồi mở lại.
+
+Lưu ý: Đây là thay đổi mã nguồn. Cần chạy GitHub Actions và kiểm tra trên máy Windows.
