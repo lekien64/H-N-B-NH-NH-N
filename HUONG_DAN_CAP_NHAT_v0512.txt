@@ -1,0 +1,57 @@
+SO HEN CT v0.5.12 - SUA LUONG QUET DS VA GOM TRINH DUYET
+
+Cac thay doi trong v0.5.12
+
+1. Bo bo kiem tra trung lich tu dong chay moi 1,4 giay tren cac trang trinh duyet.
+   Viec doi chieu lich trung chi dien ra khi nguoi dung bam nut "Quet DS".
+   Muc dich: khong hien hop thoai bat ngo khi vua tao/doi lich va khong lam gian doan thao tac tren website.
+
+2. Khi bam "Quet DS", phan mem doi chieu theo cap Ma BN + So phieu voi du lieu SQLite.
+   Neu co lich trung, hien mot canh bao truoc bang ket qua:
+   - Lich dang hen: co the chon doi lich.
+   - Lich da tra: co the chon tao lich moi.
+   - Neu mot danh sach co nhieu dong trung, chi hien mot canh bao trong mot luot quet; cac dong con lai van duoc danh dau trong bang.
+
+3. Gop trinh duyet va quet danh sach vao mot man hinh.
+   - Bo nut dieu huong trinh duyet rieng.
+   - Man hinh trinh duyet chinh ho tro nhieu tab.
+   - Moi tab co the dong, tru tab cuoi cung.
+   - Thanh dia chi, lich su, phong to/thu nho va quet DS lam viec tren tab dang chon.
+   - Giu khu vuc "Nhap thu cong" dang thu gon khi khong can dung.
+   - Giu man hinh "Lich da hen" rieng.
+
+4. Giu nguyen Data/Database.cs, cau truc SQLite, model benh nhan, bo loc, thong ke,
+   mau cot Tiem/Buoi va cac nut tang/giam ngay hen da co.
+
+CAP NHAT VA AN TOAN DU LIEU
+
+- Nen sao luu thu muc ma nguon va file SQLite truoc khi cap nhat.
+- Khong xoa database cu, khong khoi tao lai database bang tay.
+- Build bang GitHub Actions workflow build-windows.yml.
+- Cai thu tren may Windows 11 truoc; sau do kiem tra tren Windows 7.
+- Khong dung ban build nay de thay the ban dang su dung cho den khi da kiem tra thao tac quet, tao lich, doi lich, tra hen va mo nhieu tab.
+
+KIEM THU CAN THUC HIEN
+
+A. Quet DS
+- Mo trang danh sach chi dinh trong mot tab bat ky.
+- Bam Quet DS.
+- Thu voi benh nhan chua co lich, dang co lich va da tra lich.
+- Thu danh sach co nhieu benh nhan, trong do co nhieu dong trung.
+- Xac nhan chi co mot hop canh bao trung lich moi luot quet.
+
+B. Trinh duyet
+- Mo tab moi, chuyen qua lai giua cac tab.
+- Dong tab moi; xac nhan tab cuoi cung khong the dong.
+- Kiem tra thanh dia chi va lich su theo tab dang chon.
+- Kiem tra phong to, thu nho va nut Quet DS tren tab khong phai tab dau.
+
+C. Lich hen
+- Tao lich moi, doi ngay/buoi, tra hen va loc danh sach.
+- Xac nhan mau nen va vien o cot Tiem thuoc can quang va Buoi.
+- Xac nhan nut -/+ trong hop thoai tao/doi lich.
+
+GHI CHU BUILD
+
+Moi truong hien tai khong co MSBuild/dotnet nen chua the xac nhan bien dich thuc te tai day.
+Can xem ket qua GitHub Actions truoc khi cai dat. Neu build loi, gui log Actions de sua tiep.

@@ -1,0 +1,21 @@
+SO HEN BN - CAP NHAT HIEU NANG 2 CHE DO
+
+1. Trang Cai dat chi con 2 lua chon:
+   - Hieu nang cao: giu giao dien day du.
+   - Hieu nang thap: giao dien toi gian, bo bot hieu ung trang tri, lam phang nen/duong vien va dung DataGrid style gon nhe.
+
+2. Mac dinh khi cai moi la Hieu nang cao. Neu may da co settings.json thi che do da luu duoc giu nguyen.
+
+3. Lua chon duoc luu tai:
+   %LOCALAPPDATA%\PatientAppointmentManager\settings.json
+   Ap dung ngay sau khi bam Luu cau hinh va duoc nap lai khi khoi dong.
+
+4. Khong thay doi nghiep vu hen lich, SQLite, quet benh nhan, tao/doi/tra hen, bo loc, trinh duyet, sao luu va khoi phuc.
+
+5. Hieu nang thap khong tu dong dong tab/trinh duyet, khong ngat trang dang su dung va khong xoa du lieu. Viec nay tranh lam mat trang thai quet benh nhan.
+
+GHI CHU KIEM THU:
+- Da kiem tra cu phap XML cua MainWindow.xaml.
+- Da kiem tra can bang ngoac co ban trong MainWindow.xaml.cs.
+- Chua build bang MSBuild/dotnet trong moi truong nay va chua kiem thu thuc te tren Windows.
+- Hieu nang thap hien tap trung vao giam tai ve giao dien va DataGrid; chua co so lieu benchmark CPU/RAM va chua can thiep sau vao Chromium/CefSharp.

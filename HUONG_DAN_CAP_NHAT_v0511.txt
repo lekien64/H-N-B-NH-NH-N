@@ -1,0 +1,20 @@
+SỔ HẸN CT v0.5.11 - SỬA LỖI SAU KIỂM THỬ v0.5.10
+
+Các thay đổi:
+1. Khi bấm Quét DS, nếu phát hiện Mã BN + Số phiếu đã có lịch (đang hẹn hoặc đã trả), hiển thị hộp thoại cảnh báo ngay trước bảng kết quả. Chỉ mở một cảnh báo cho mỗi lượt quét để tránh làm phiền; các dòng trùng còn lại vẫn được đánh dấu trong bảng.
+2. Bộ dò tự động nhận diện thêm bảng chỉ định bệnh viện đã xác nhận (table._st-table_gefxy_208, Số phiếu ở cột 1 và Mã BN ở cột 3), đồng thời vẫn dò bảng tìm bệnh nhân theo tiêu đề cột.
+3. Cột Tiêm thuốc cản quang và Buổi dùng DataGridCell Style/DataTrigger để tô nền, viền và chữ. Loại bỏ các giá trị nền/viền cục bộ từng ghi đè màu trạng thái.
+4. Hộp thoại Tạo lịch hẹn và Đổi lịch có nút −/+ cạnh ô Ngày hẹn, điều chỉnh từng ngày.
+5. Sửa xử lý sắp xếp DataGrid bằng DataView.Sort có kiểm soát; Ngày hẹn và Ngày tạo lịch sắp xếp theo giá trị ngày giờ gốc, Tiêm thuốc cản quang sắp xếp theo trạng thái. Lỗi sắp xếp không còn làm ứng dụng thoát.
+
+Cập nhật:
+- Sao lưu thư mục mã nguồn hiện tại trước khi thay thế.
+- Giữ nguyên database SQLite hiện có; không xóa database.
+- Build trên GitHub Actions trước khi cài lên máy sử dụng.
+- Cảnh báo CefSharp NU1903 vẫn là cảnh báo dependency riêng, không phải lỗi biên dịch.
+
+Kiểm thử cần thực hiện:
+- Quét danh sách có một bệnh nhân đang có lịch và một bệnh nhân đã trả hẹn.
+- Bấm tiêu đề Ngày hẹn tăng/giảm; bấm Tiêm thuốc cản quang tăng/giảm.
+- Kiểm tra nền + viền ở Sáng/Chiều và Có tiêm/Không tiêm/Chưa xác định.
+- Thử nút −/+ ở cả hai hộp thoại.

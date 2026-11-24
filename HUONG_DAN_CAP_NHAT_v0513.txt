@@ -1,0 +1,16 @@
+SỔ HẸN CT - CẬP NHẬT v0.5.13
+
+Các sửa đổi trong bản này:
+1. Khu vực Nhập thủ công: thêm nút − và + cạnh Ngày hẹn để lùi/tiến đúng 1 ngày.
+2. Tab trình duyệt đầu tiên (Trang 1) có nút × để đóng như các tab được tạo sau đó. Không cho đóng tab cuối cùng.
+3. Liên kết yêu cầu mở cửa sổ/tab mới được chuyển vào một tab mới trong trình duyệt tích hợp, không tạo cửa sổ Chromium riêng.
+
+Kiểm tra đã thực hiện trong môi trường chỉnh sửa:
+- MainWindow.xaml phân tích XML thành công.
+- Đã kiểm tra sự hiện diện của hai sự kiện tăng/giảm ngày và bộ xử lý popup.
+- Chưa biên dịch được tại môi trường này do không có .NET Framework MSBuild/C# compiler và chưa chạy thử trực tiếp trên Windows.
+
+Sau khi cập nhật mã nguồn lên nhánh GitHub, chạy GitHub Actions để kiểm tra build. Sau đó kiểm thử:
+- Ngày hẹn thủ công: bấm − và +, ngày thay đổi đúng một ngày.
+- Trang 1: nút × đóng được; nếu chỉ còn một tab thì không đóng.
+- Mở liên kết bằng cách nhấn Ctrl+click hoặc chọn mở liên kết tab mới: tab mới xuất hiện trong cùng cửa sổ ứng dụng.

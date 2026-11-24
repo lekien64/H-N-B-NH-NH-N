@@ -1,0 +1,43 @@
+SO HEN CT v0.4 - HYBRID BROWSER
+
+Cac thay doi trong ban nay:
+1. Doi ten hien thi cua cua so thanh "So hen CT".
+2. Thanh ben thu gon con 64px, mo rong khi dua chuot vao. Ba nut dieu huong chi hien bieu tuong va co ToolTip.
+3. Tab Trinh duyet ho tro tao nhieu tab, dong tab phu, moi tab co Chromium browser rieng.
+4. Thanh dia chi tab 1 va tab 2 de trong khi khoi dong; nhan Enter de mo dia chi.
+5. Luu lich su URL da truy cap trong SQLite va hien goi y tu lich su khi focus vao thanh dia chi.
+6. Them nut zoom +/-, nut vua man hinh (dua zoom ve 100%) cho ca tab 1 va tab 2.
+7. Dong lich co trang thai "Da tra lich" trong SQLite duoc hien thi nhan "Da tra hen"; cac o du lieu cua dong nay duoc gach ngang.
+8. Them luu thong tin dang nhap theo tung host bang Windows DPAPI CurrentUser. Nguoi dung chu dong nhap va bam Luu; nut Tu dien chi dien form, khong tu dong gui dang nhap.
+
+BAO MAT:
+- Mat khau duoc ma hoa bang Windows DPAPI CurrentUser truoc khi luu vao SQLite.
+- Chi tai khoan Windows da ma hoa moi giai ma duoc tren may nay.
+- Khong tu dong luu mat khau va khong tu dong submit form.
+- Website HTTP khong ma hoa mat khau tren duong truyen. Uu tien HTTPS neu he thong benh vien ho tro.
+- Khong chia se file appointments.db neu co thong tin dang nhap da luu.
+
+TUONG THICH:
+- .NET Framework 4.8 x64
+- CefSharp 109.1.110 (Chromium 109, giu tuong thich Windows 7 SP1)
+- Giu nguyen thu muc du lieu LocalAppData\PatientAppointmentManager de khong mat lich hen cu.
+
+KIEM THU:
+- Da kiem tra XML cua XAML va csproj.
+- Da doi chieu ten event trong XAML voi handler trong C#.
+- Chua build MSBuild va chua chay thu tren Windows 7. Can chay GitHub Actions truoc khi thay ban dang su dung.
+
+
+CAP NHAT GIAO DIEN VA BO DEM - GIAI DOAN TIEP THEO:
+9. Tab Lich da hen: ngay bat dau va ngay ket thuc mac dinh deu la hom nay.
+10. Bo dem Tong so ca hien tong, so ca Co tiem va Khong tiem.
+11. Bo dem So ca con hen hien tong ca con hen, so ca Co tiem va Khong tiem.
+12. Hai bo dem tinh tren toan bo lich trong khoang ngay/buoi, khong bi bo loc tiem hoac tuy chon hien lich da tra lam sai lech.
+13. Bo loc tu cap nhat khi thay doi ngay, buoi, loai tiem hoac tuy chon hien lich da tra; da bo nut Ap dung bo loc.
+14. Da bo cac dong mo ta phu o Tab 1 va Tab 2 de tang dien tich hien thi trinh duyet.
+15. Can chinh nut Mo va DOM tren ca hai tab de can giua noi dung theo chieu ngang/doc va tranh bi cat chu.
+
+KIEM TRA BAN NGUON:
+- Da kiem tra XML XAML hop le.
+- Da doi chieu cac event trong XAML voi handler C#; khong phat hien handler bi thieu.
+- Chua chay MSBuild/GitHub Actions trong moi truong nay. Can build bang GitHub Actions va kiem tra lai tren Windows 7 truoc khi thay ban dang su dung.

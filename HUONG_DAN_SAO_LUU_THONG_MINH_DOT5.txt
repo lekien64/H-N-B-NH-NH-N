@@ -1,0 +1,24 @@
+SOHENBN FULL 0.6.0 - DOT 5: SAO LƯU THÔNG MINH CỤC BỘ
+
+ĐÃ TÍCH HỢP TRONG ĐỢT NÀY
+1. SQLite DataRevision và triggers theo dõi thay đổi Appointments, AuditLog, SavedLogins.
+2. Không tạo bản sao lưu mới nếu revision không thay đổi và bản sao lưu trước đó vẫn tồn tại.
+3. Windows Task Scheduler đăng ký tác vụ SoHenBN_DailyBackup lúc 16:30 hằng ngày.
+4. Tác vụ chạy SoHenBN.exe --scheduled-backup, không khởi tạo CefSharp, nhằm giảm tài nguyên.
+5. Khi mở ứng dụng, nếu revision đã thay đổi so với lần sao lưu thành công, phần mềm thực hiện sao lưu bù.
+6. Bản sao lưu được kiểm tra PRAGMA integrity_check trước khi ghi nhận đã sao lưu.
+7. Nhật ký: %LOCALAPPDATA%\PatientAppointmentManager\smart-backup.log
+8. Trạng thái: %LOCALAPPDATA%\PatientAppointmentManager\smart-backup-state.json
+9. Bản sao lưu: %LOCALAPPDATA%\PatientAppointmentManager\Backups
+
+GIỚI HẠN CẦN NÓI RÕ
+- Đợt này mới triển khai lịch tự động và sao lưu thông minh CỤC BỘ.
+- CHƯA tích hợp upload Google Drive, OAuth, mã hóa cloud hoặc khôi phục từ Drive.
+- Muốn tích hợp Google Drive cần tạo OAuth Desktop Client trong Google Cloud Console và cung cấp Client ID (không gửi Client Secret hoặc mật khẩu Google).
+- Chưa thể kiểm chứng tác vụ Task Scheduler trên Windows thật trong môi trường hiện tại. Cần chạy GitHub Actions và thử trên máy Windows 7/10/11.
+- Tác vụ Windows chạy theo tài khoản Windows hiện tại; máy phải bật và người dùng phải đăng nhập để tác vụ chạy theo cấu hình hiện tại.
+
+LƯU Ý
+- Trigger theo dõi thay đổi bảng lịch hẹn, nhật ký thao tác và thông tin đăng nhập lưu trong ứng dụng. Lịch sử duyệt web không làm phát sinh sao lưu.
+- Nếu DB có thay đổi, sao lưu bù có thể chạy ngay khi mở ứng dụng, không phải đợi đến 16:30.
+- Không xóa các bản sao lưu cũ trong giai đoạn thử nghiệm.

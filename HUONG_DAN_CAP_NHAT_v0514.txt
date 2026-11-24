@@ -1,0 +1,15 @@
+SO HEN BENH NHAN - CAP NHAT v0.5.14
+
+Cac thay doi:
+1. Ket qua quet chi co mot benh nhan: tu dong chon dong duy nhat, khong can bam chon truoc khi thao tac.
+2. Tao lich thanh cong tu bang ket qua quet: hien thong bao ngan khoang 1 giay, tu dong dong thong bao va dong bang ket qua quet, tro ve man hinh lam viec.
+3. Thong bao phat hien trung lich co ba nut: Tra hen, Doi lich, Dong. Tra hen va Doi lich chi kha dung khi lich hien tai dang o trang thai Da hen.
+4. Khong thay doi cau truc co so du lieu.
+
+Kiem tra thu cong can thuc hien sau khi build:
+- Quet danh sach chi co 1 benh nhan, bam Tao lich hen ngay.
+- Tao lich thanh cong, xac nhan thong bao tu tat va bang ket qua quet tu dong dong.
+- Quet benh nhan dang co lich, thu Tra hen, Doi lich va Dong.
+- Quet benh nhan da tra hen, xac nhan hai thao tac khong hop le duoc vo hieu hoa.
+
+Luu y: Ma nguon da duoc cap nhat, nhung can chay GitHub Actions va kiem thu tren Windows truoc khi dua vao su dung.

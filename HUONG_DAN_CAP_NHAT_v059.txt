@@ -1,0 +1,21 @@
+SO HEN CT v0.5.9 - HUONG DAN CAP NHAT
+
+1. Sao luu thu muc ma nguon hien tai va giu nguyen file co so du lieu SQLite tren may dang su dung.
+2. Giai nen goi ZIP v0.5.9.
+3. Dua noi dung thu muc SoHenCT_v051_build len nhanh feature/v0.2-cefsharp-browser, thay the ma nguon cu.
+4. Chay GitHub Actions workflow build-windows.yml.
+5. Neu build thanh cong, cai ban thu tren Windows 11 va Windows 7 truoc khi cap nhat ban su dung chinh thuc.
+
+THAY DOI v0.5.9
+- Tang co chu bang Lich da hen: noi dung 15.5 px, tieu de cot 14.5 px.
+- Tang chieu cao dong va tieu de de de doc.
+- Chuan hoa can le: Ma BN, Ten benh nhan, Khoa phong, Dich vu can trai; cac cot ma/ID, ngay, buoi va trang thai can giua. Tieu de can theo noi dung cot.
+- Tang do ro mau phan biet Sang/Chieu va Co tiem/Khong tiem/Chua xac dinh.
+- Click chuot trai vao muc website trong lich su se mo trang ngay. Dung phim mui ten de di chuyen trong danh sach khong tu dong mo trang. URL moi van mo bang Enter hoac nut Mo.
+- Giu nguyen logic quet dich vu va du lieu lich hen tu v0.5.8.
+
+KIEM TRA
+- Da kiem tra XML cua XAML va CSPROJ.
+- Chua co MSBuild trong moi truong tao goi, do do chua xac nhan build thuc te.
+- Can thu nghiem click lich su tren ca hai o dia chi (tab Trinh duyet va tab Them lich).
+- Khong xoa hoac thay the co so du lieu SQLite hien tai.

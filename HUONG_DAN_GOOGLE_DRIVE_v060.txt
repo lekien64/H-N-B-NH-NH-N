@@ -1,0 +1,37 @@
+SOHENBN FULL 0.6.0 - TICH HOP GOOGLE DRIVE (DOT 2)
+
+CAC THAY DOI
+- Them nut Ket noi / dang nhap Google va Sao luu Drive ngay trong tab Cai dat.
+- OAuth Desktop dung file client JSON do chu may tai tu Google Cloud.
+- Chi xin scope https://www.googleapis.com/auth/drive.file, khong xin quyen toan bo Drive.
+- Token OAuth duoc luu trong %LOCALAPPDATA%\PatientAppointmentManager\GoogleAuth.
+- Luu duong dan OAuth JSON trong settings.json; khong dua JSON/secret vao repository.
+- Tao thu muc SoHenBN_Backups tren Drive.
+- Sao luu tu dong luc 16:30 khi ung dung dang chay va da ket noi Drive.
+- Neu mo ung dung sau 16:30, se thuc hien bu sao luu trong lan kiem tra dau tien.
+- So sanh SHA-256 cua appointments.db; neu khong thay doi thi bo qua sao luu ngay.
+- Luu toi da 30 ban DAY, 12 ban WEEK, 12 ban MONTH trong thu muc rieng.
+- WEEK tao vao thu Hai; MONTH tao vao ngay dau thang, neu co thay doi du lieu.
+
+CAU HINH LAN DAU
+1. Tren Google Cloud, chon dung project SoHenBN Backup.
+2. Google Drive API phai o trang thai Enabled.
+3. OAuth Client phai la Desktop app.
+4. Google Auth Platform > Audience: them tai khoan dung chung vao Test users. Anh nguoi dung da xac nhan 2 tai khoan co trong danh sach.
+5. Tai file JSON cua OAuth Desktop client ve may Windows.
+6. Build va chay SoHenBN, vao Cai dat > Sao luu dam may Google Drive.
+7. Bam Ket noi / dang nhap Google, chon file JSON, chon tai khoan dung chung va chap thuan quyen.
+8. Bam Sao luu Drive ngay de thu nghiem; kiem tra thu muc SoHenBN_Backups tren Drive.
+
+BAO MAT
+- Khong commit file OAuth JSON len GitHub.
+- Khong gui client_secret, access token, refresh token hoac file JSON cho nguoi khac.
+- Token duoc luu tren may trong LocalAppData. Can bao ve tai khoan Windows.
+- Scope drive.file chi cho phep app thao tac voi cac tep do app tao/mo theo co che Google Drive.
+
+GIOI HAN DOT NAY
+- Sao luu 16:30 chi chay khi SoHenBN dang mo. Neu may tat hoac ung dung dong tai thoi diem do, lan mo app tiep theo sau 16:30 se bu neu chua sao luu hom do.
+- Chua co Windows Task Scheduler de chay khi ung dung dong; can bo sung rieng neu muon sao luu bat ke trang thai app.
+- Chua co chuc nang tai ban sao tu Drive va khoi phuc truc tiep tu Drive; hien co khoi phuc tu file SQLite cuc bo.
+- Chua build/test tren Windows trong moi truong nay. Can chay GitHub Actions de xac nhan phien ban Google API package va tuong thich .NET Framework 4.8.
+- Neu app o OAuth Testing, tai khoan dang dang nhap phai co trong danh sach Test users.

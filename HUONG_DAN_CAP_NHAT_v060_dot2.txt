@@ -1,0 +1,22 @@
+SOHENCT FULL 0.6.0 - DOT 2: HAI CHE DO GIAO DIEN
+
+1. THAY DOI
+- Chỉ còn 2 lựa chọn trong Cài đặt:
+  + Giao diện đầy đủ: giữ giao diện hiện tại.
+  + Giao diện tối giản: nền phẳng, bỏ gradient, bỏ đổ bóng WPF, bỏ bo góc trang trí.
+- Cài mới mặc định Giao diện tối giản.
+- Lựa chọn được lưu trong %LOCALAPPDATA%\PatientAppointmentManager\settings.json.
+- Chế độ được đọc và áp dụng khi khởi động lại.
+- Tương thích cấu hình cũ: low -> minimal; high/balanced -> full.
+
+2. TỐI ƯU AN TOÀN
+- Bật DataGrid row/column virtualization, recycling và CanContentScroll.
+- Không tắt JavaScript, cookie, tải trang hay các chức năng cần thiết của CefSharp.
+- Không thay đổi nghiệp vụ đặt lịch, dữ liệu SQLite hoặc cấu trúc bảng.
+- Màu trạng thái nghiệp vụ của bảng được giữ nguyên.
+
+3. LƯU Ý KIỂM THỬ
+- Đã kiểm tra cú pháp XML của MainWindow.xaml và cân bằng dấu ngoặc ở các tệp C# chính.
+- Chưa biên dịch bằng MSBuild và chưa chạy thử trên Windows 7/10/11 trong môi trường hiện tại.
+- Chưa có đo đạc CPU/RAM thực tế. Không khẳng định mức giảm tài nguyên cụ thể.
+- Cần chạy GitHub Actions, sau đó kiểm tra cả hai giao diện, thao tác đặt/đổi/trả lịch, quét bệnh nhân, trình duyệt nhiều tab và dữ liệu hiện có trước khi phát hành.
