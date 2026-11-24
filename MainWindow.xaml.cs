@@ -61,6 +61,16 @@ namespace PatientAppointmentManager
 
         private string CurrentPerformanceMode = "low";
 
+        // Theo dõi kết quả đơn lẻ xuất hiện tự động trên trang bệnh viện.
+        private DispatcherTimer _singlePatientWatchTimer;
+        private ChromiumWebBrowser _singlePatientWatchBrowser;
+        private bool _singlePatientWatchBusy;
+        private string _singlePatientPendingKey = "";
+        private int _singlePatientStablePolls;
+        private readonly HashSet<string> _singlePatientNoticesShown =
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+
         private void LoadAppSettings()
         {
             try
@@ -730,8 +740,111 @@ namespace PatientAppointmentManager
                     if (ReferenceEquals(browser, ActiveBrowser))
                         AddUrlBox.Text = args.Url;
                     SaveVisitedAddress(args.Url, AddUrlBox);
+
+                    // Bắt đầu theo dõi sau khi trang đã tải. Việc kiểm tra diễn ra
+                    // tự động, không phụ thuộc nút "Quét danh sách".
+                    _singlePatientWatchBrowser = browser;
+                    _singlePatientPendingKey = "";
+                    _singlePatientStablePolls = 0;
+                    if (_singlePatientWatchTimer == null)
+                    {
+                        _singlePatientWatchTimer = new DispatcherTimer();
+                        _singlePatientWatchTimer.Interval = TimeSpan.FromSeconds(1.5);
+                        _singlePatientWatchTimer.Tick += async (s, e) =>
+                            await CheckAutomaticSinglePatientAsync();
+                    }
+                    if (!_singlePatientWatchTimer.IsEnabled)
+                        _singlePatientWatchTimer.Start();
                 }));
             };
+        }
+
+        private async Task CheckAutomaticSinglePatientAsync()
+        {
+            if (_singlePatientWatchBusy) return;
+            var browser = _singlePatientWatchBrowser;
+            if (browser == null || !browser.IsBrowserInitialized ||
+                !ReferenceEquals(browser, ActiveBrowser))
+                return;
+
+            _singlePatientWatchBusy = true;
+            try
+            {
+                var frame = browser.GetMainFrame();
+                if (frame == null || !frame.IsValid) return;
+
+                // Dùng cùng bộ đọc DOM đã được xác nhận cho nút Quét danh sách.
+                var response = await frame.EvaluateScriptAsync(HospitalScanScript);
+                if (!response.Success || response.Result == null) return;
+
+                var serializer = new JavaScriptSerializer();
+                var payload = serializer.Deserialize<Dictionary<string, object>>(
+                    Convert.ToString(response.Result));
+                if (payload == null || payload.ContainsKey("error")) return;
+
+                var rows = payload.ContainsKey("rows")
+                    ? payload["rows"] as System.Collections.ArrayList : null;
+
+                // Chỉ tự động xử lý đúng một dòng. Nhiều dòng hoàn toàn giữ luồng cũ.
+                if (rows == null || rows.Count != 1)
+                {
+                    _singlePatientPendingKey = "";
+                    _singlePatientStablePolls = 0;
+                    return;
+                }
+
+                var data = rows[0] as Dictionary<string, object>;
+                if (data == null) return;
+                string receipt = GetScanValue(data, "receiptCode");
+                string patient = GetScanValue(data, "patientCode");
+                if (string.IsNullOrWhiteSpace(receipt) || string.IsNullOrWhiteSpace(patient))
+                    return;
+
+                string key = patient + "|" + receipt;
+                if (_singlePatientNoticesShown.Contains(key)) return;
+
+                // Đợi cùng một dòng ổn định qua hai lần đọc để tránh popup khi
+                // bảng đang tải dở và tạm thời mới có một dòng.
+                if (string.Equals(_singlePatientPendingKey, key, StringComparison.OrdinalIgnoreCase))
+                    _singlePatientStablePolls++;
+                else
+                {
+                    _singlePatientPendingKey = key;
+                    _singlePatientStablePolls = 1;
+                }
+                if (_singlePatientStablePolls < 2) return;
+
+                var appointment = Database.FindActiveAppointment(patient, receipt);
+                if (appointment == null) return;
+
+                var row = new HospitalScanRow
+                {
+                    ReceiptCode = receipt,
+                    PatientCode = patient,
+                    PatientName = GetScanValue(data, "patientName"),
+                    Age = GetScanValue(data, "age"),
+                    Department = GetScanValue(data, "department"),
+                    InjectionStatus = DetectInjectionStatus(GetScanValue(data, "serviceName")),
+                    OrderedAt = GetScanValue(data, "orderedAt"),
+                    ServiceName = GetScanValue(data, "serviceName"),
+                    Room = GetScanValue(data, "room"),
+                    Status = "ĐÃ CÓ LỊCH",
+                    ExistingAppointmentId = appointment.Id,
+                    ExistingAppointmentDate = appointment.AppointmentDate.ToString("dd/MM/yyyy"),
+                    ExistingShift = appointment.Shift
+                };
+
+                _singlePatientNoticesShown.Add(key);
+                ShowDuplicateNotice(row, appointment);
+            }
+            catch
+            {
+                // Theo dõi tự động không được làm gián đoạn thao tác trên trình duyệt.
+            }
+            finally
+            {
+                _singlePatientWatchBusy = false;
+            }
         }
 
         private void ConfigureBrowserTab(TabItem tab, ChromiumWebBrowser browser, string title)
@@ -1381,14 +1494,22 @@ namespace PatientAppointmentManager
                 if (results.Count == 1)
                 {
                     var duplicate = results[0];
-                    if (duplicate.ExistingAppointmentId > 0)
+
+                    // Chỉ mở thông báo rút gọn khi bệnh nhân đang có lịch hẹn còn hiệu lực.
+                    // Nếu chưa có lịch hoặc lịch cũ đã trả hẹn, giữ nguyên cửa sổ kết quả
+                    // như các phiên bản trước để người dùng tiếp tục thao tác theo quy trình cũ.
+                    var activeAppointment = Database.FindActiveAppointment(
+                        duplicate.PatientCode, duplicate.ReceiptCode);
+
+                    if (activeAppointment != null)
                     {
-                        var savedAppointment = Database.FindLatestAppointment(duplicate.PatientCode, duplicate.ReceiptCode);
-                        if (savedAppointment != null)
-                        {
-                            ShowDuplicateNotice(duplicate, savedAppointment);
-                            return;
-                        }
+                        duplicate.Status = "ĐÃ CÓ LỊCH";
+                        duplicate.ExistingAppointmentId = activeAppointment.Id;
+                        duplicate.ExistingAppointmentDate = activeAppointment.AppointmentDate.ToString("dd/MM/yyyy");
+                        duplicate.ExistingShift = activeAppointment.Shift;
+
+                        ShowDuplicateNotice(duplicate, activeAppointment);
+                        return;
                     }
                 }
                 ShowHospitalScanResults(results);
