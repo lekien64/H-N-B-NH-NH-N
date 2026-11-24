@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Diagnostics;
 using System.Data;
@@ -75,10 +75,9 @@ namespace PatientAppointmentManager
             }
             catch { CurrentPerformanceMode = "low"; }
 
+            if (CurrentPerformanceMode != "low") CurrentPerformanceMode = "high";
             if (PerformanceModeBox != null)
-                PerformanceModeBox.SelectedIndex =
-                    CurrentPerformanceMode == "high" ? 0 :
-                    CurrentPerformanceMode == "balanced" ? 1 : 2;
+                PerformanceModeBox.SelectedIndex = CurrentPerformanceMode == "low" ? 1 : 0;
 
             ApplyPerformanceMode(CurrentPerformanceMode);
         }
@@ -87,10 +86,10 @@ namespace PatientAppointmentManager
         {
             CurrentPerformanceMode = mode;
             bool low = mode == "low";
-            bool balanced = mode == "balanced";
 
-            // Tối giản hiển thị khi chạy cấu hình thấp/trung bình.
-            if (low || balanced)
+            // Chế độ thấp ưu tiên tốc độ: nền phẳng, bỏ hiệu ứng trang trí,
+            // bật tái sử dụng hàng và ảo hóa. Không ẩn hoặc vô hiệu hóa chức năng.
+            if (low)
             {
                 Background = System.Windows.Media.Brushes.WhiteSmoke;
                 if (AddView != null) AddView.Background = System.Windows.Media.Brushes.WhiteSmoke;
@@ -118,10 +117,7 @@ namespace PatientAppointmentManager
 
         private void SaveSettings_Click(object sender, RoutedEventArgs e)
         {
-            var item = PerformanceModeBox.SelectedItem as ComboBoxItem;
-            string mode = item == null ? "low" :
-                (PerformanceModeBox.SelectedIndex == 0 ? "high" :
-                PerformanceModeBox.SelectedIndex == 1 ? "balanced" : "low");
+            string mode = PerformanceModeBox.SelectedIndex == 0 ? "high" : "low";
 
             try
             {
@@ -228,6 +224,102 @@ namespace PatientAppointmentManager
                 return;
             }
             await PerformCloudBackupAsync(true);
+        }
+
+        private async void RestoreFromGoogleDrive_Click(object sender, RoutedEventArgs e)
+        {
+            if (cloudBackupBusy) return;
+            if (cloudDrive == null)
+            {
+                ShowAppMessage("Bạn cần kết nối Google Drive trước khi khôi phục.");
+                return;
+            }
+
+            cloudBackupBusy = true;
+            try
+            {
+                GoogleDriveStatusText.Text = "Đang tải danh sách bản sao lưu...";
+                var backups = await cloudDrive.ListBackupsAsync();
+                if (backups == null || backups.Count == 0)
+                {
+                    ShowAppMessage("Không tìm thấy bản sao lưu SoHenBN trong thư mục Google Drive.");
+                    GoogleDriveStatusText.Text = "Không tìm thấy bản sao lưu trên Drive.";
+                    return;
+                }
+
+                var picker = new Window
+                {
+                    Title = "Chọn bản sao lưu Google Drive",
+                    Owner = this,
+                    Width = 720,
+                    Height = 430,
+                    WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                    ResizeMode = ResizeMode.CanResize,
+                    Background = System.Windows.Media.Brushes.White
+                };
+                var panel = new DockPanel { Margin = new Thickness(14) };
+                var hint = new TextBlock
+                {
+                    Text = "Chọn bản sao lưu cần khôi phục. Danh sách được sắp xếp mới nhất trước.",
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(0, 0, 0, 10)
+                };
+                DockPanel.SetDock(hint, Dock.Top);
+                panel.Children.Add(hint);
+                var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+                var cancel = new Button { Content = "Hủy", Width = 90, Height = 32, Margin = new Thickness(0, 10, 8, 0), IsCancel = true };
+                var ok = new Button { Content = "Chọn bản này", Width = 125, Height = 32, Margin = new Thickness(0, 10, 0, 0), IsDefault = true };
+                buttons.Children.Add(cancel); buttons.Children.Add(ok);
+                DockPanel.SetDock(buttons, Dock.Bottom);
+                panel.Children.Add(buttons);
+                var list = new ListBox { ItemsSource = backups, DisplayMemberPath = "DisplayName", MinHeight = 220 };
+                list.SelectedIndex = 0;
+                panel.Children.Add(list);
+                ok.Click += (s, args) => { if (list.SelectedItem != null) picker.DialogResult = true; };
+                picker.Content = panel;
+                if (picker.ShowDialog() != true || !(list.SelectedItem is GoogleDriveBackupService.CloudBackupInfo selected))
+                    return;
+
+                string warning = "Bạn sắp khôi phục dữ liệu từ Google Drive:\n" + selected.DisplayName +
+                    "\n\nDữ liệu hiện tại sẽ được sao lưu cục bộ trước khi thay thế. Tiếp tục?";
+                if (ShowAppMessage(warning, "Xác nhận khôi phục từ Drive", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+                    return;
+
+                string backupFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PatientAppointmentManager", "Backups");
+                Directory.CreateDirectory(backupFolder);
+                string safeName = Path.GetFileName(selected.Name);
+                if (string.IsNullOrWhiteSpace(safeName)) safeName = "SoHenBN_DriveRestore.db";
+                string downloaded = Path.Combine(backupFolder, "drive_restore_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + "_" + safeName);
+                GoogleDriveStatusText.Text = "Đang tải bản sao lưu từ Drive...";
+                await cloudDrive.DownloadBackupAsync(selected.Id, downloaded);
+
+                // Validate downloaded SQLite before touching the live database.
+                using (var check = new System.Data.SQLite.SQLiteConnection("Data Source=" + downloaded + ";Version=3;Read Only=True;"))
+                {
+                    check.Open();
+                    using (var command = check.CreateCommand())
+                    {
+                        command.CommandText = "PRAGMA integrity_check";
+                        string integrity = Convert.ToString(command.ExecuteScalar());
+                        if (!string.Equals(integrity, "ok", StringComparison.OrdinalIgnoreCase))
+                            throw new InvalidDataException("Bản sao lưu tải về không hợp lệ (SQLite integrity_check thất bại).");
+                    }
+                }
+
+                string currentBackup = Database.BackupDatabase();
+                Database.RestoreDatabase(downloaded);
+                LoadAppointments();
+                GoogleDriveStatusText.Text = "Khôi phục từ Google Drive thành công: " + selected.Name;
+                ShowAppMessage("Đã khôi phục dữ liệu từ Google Drive.\n\nBản sao lưu vừa tải: " + downloaded +
+                    "\nBản sao lưu dữ liệu trước khi khôi phục: " + currentBackup,
+                    "Khôi phục thành công", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                GoogleDriveStatusText.Text = "Khôi phục Drive thất bại: " + ex.Message;
+                ShowAppMessage("Không thể khôi phục từ Google Drive:\n" + ex.Message, "Lỗi khôi phục", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally { cloudBackupBusy = false; }
         }
 
         private async Task PerformCloudBackupAsync(bool force)

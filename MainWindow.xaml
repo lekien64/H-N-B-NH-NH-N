@@ -1,4 +1,4 @@
-﻿<Window x:Class="PatientAppointmentManager.MainWindow"
+<Window x:Class="PatientAppointmentManager.MainWindow"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:cef="clr-namespace:CefSharp.Wpf;assembly=CefSharp.Wpf"
@@ -348,10 +348,9 @@
        <StackPanel>
         <TextBlock Text="Hiệu năng" FontSize="18" FontWeight="Bold" Margin="0,0,0,8"/>
         <TextBlock Text="Chọn cấu hình sẽ được áp dụng sau khi khởi động lại phần mềm." Foreground="#637780" Margin="0,0,0,8"/>
-        <ComboBox x:Name="PerformanceModeBox" Width="260" Height="34" HorizontalAlignment="Left" SelectedIndex="2">
-         <ComboBoxItem Content="Cấu hình cao"/>
-         <ComboBoxItem Content="Cấu hình trung bình"/>
-         <ComboBoxItem Content="Cấu hình thấp"/>
+        <ComboBox x:Name="PerformanceModeBox" Width="260" Height="34" HorizontalAlignment="Left" SelectedIndex="1">
+         <ComboBoxItem Content="Hiệu năng cao | Đầy đủ giao diện"/>
+         <ComboBoxItem Content="Hiệu năng thấp | Tối giản, ưu tiên tốc độ"/>
         </ComboBox>
         <Button Content="Lưu cấu hình" Width="140" Height="36" HorizontalAlignment="Left" Margin="0,10,0,0" Click="SaveSettings_Click"/>
         <TextBlock x:Name="SettingsStatusText" Foreground="#637780" Margin="0,8,0,0"/>
@@ -375,8 +374,10 @@
         <WrapPanel>
          <Button Content="Kết nối / đăng nhập Google" Width="210" Height="36" Margin="0,0,8,8" Click="ConnectGoogleDrive_Click"/>
          <Button Content="Sao lưu Drive ngay" Width="150" Height="36" Margin="0,0,8,8" Click="CloudBackupNow_Click"/>
+         <Button Content="Khôi phục từ Drive" Width="165" Height="36" Margin="0,0,8,8" Click="RestoreFromGoogleDrive_Click"/>
         </WrapPanel>
         <TextBlock x:Name="GoogleDriveStatusText" Text="Chưa kết nối Google Drive." Foreground="#637780" TextWrapping="Wrap" Margin="0,4,0,6"/>
+        <TextBlock Text="Khôi phục sẽ tải bản sao lưu đã chọn, kiểm tra tính toàn vẹn SQLite và tự sao lưu dữ liệu hiện tại trước khi thay thế." Foreground="#637780" TextWrapping="Wrap" Margin="0,0,0,6"/>
         <TextBlock Text="Lịch tự động: 16:30 mỗi ngày khi phần mềm đang chạy. Chỉ tải lên khi cơ sở dữ liệu thay đổi. Lưu tối đa 30 bản ngày, 12 bản tuần và 12 bản tháng." Foreground="#637780" TextWrapping="Wrap"/>
        </StackPanel>
       </Border>

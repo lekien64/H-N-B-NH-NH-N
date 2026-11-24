@@ -1,0 +1,9 @@
+SO HEN BN - CAP NHAT V0.6.1
+
+1. Hieu nang chi con 2 lua chon: Hieu nang cao va Hieu nang thap.
+2. Hieu nang thap dung nen phang, toi gian trang tri, bat ao hoa bang va tai su dung hang; khong tat chuc nang hen lich.
+3. Google Drive co them nut Khoi phuc tu Drive. Nguoi dung chon ban sao luu trong danh sach, tai ve va kiem tra SQLite integrity_check.
+4. Truoc khi thay the co so du lieu hien tai, ung dung tao mot ban sao luu cuc bo. Sau khoi phuc, danh sach lich hen duoc nap lai.
+5. Khong thay doi schema co so du lieu va logic tao/sua/doi/tra hen.
+
+Ghi chu kiem thu: Can chay GitHub Actions de xac nhan bien dich va thu nghiem dang nhap Drive/khoi phuc tren may Windows.
