@@ -773,19 +773,18 @@ namespace PatientAppointmentManager
                 var frame = browser.GetMainFrame();
                 if (frame == null || !frame.IsValid) return;
 
-                // Dùng cùng bộ đọc DOM đã được xác nhận cho nút Quét danh sách.
-                var response = await frame.EvaluateScriptAsync(HospitalScanScript);
+                // Dùng bộ dò kết quả tra cứu bệnh nhân, không dùng bộ đọc bảng
+                // dành riêng cho nút "Quét danh sách". Script này nhận diện cả
+                // bảng kết quả tra cứu thông thường và bảng chỉ định 13 cột.
+                var response = await frame.EvaluateScriptAsync(AutoDetectAppointmentPairsScript);
                 if (!response.Success || response.Result == null) return;
 
                 var serializer = new JavaScriptSerializer();
-                var payload = serializer.Deserialize<Dictionary<string, object>>(
+                var rows = serializer.Deserialize<System.Collections.ArrayList>(
                     Convert.ToString(response.Result));
-                if (payload == null || payload.ContainsKey("error")) return;
 
-                var rows = payload.ContainsKey("rows")
-                    ? payload["rows"] as System.Collections.ArrayList : null;
-
-                // Chỉ tự động xử lý đúng một dòng. Nhiều dòng hoàn toàn giữ luồng cũ.
+                // Chỉ tự động xử lý đúng một bệnh nhân. Nhiều kết quả không đổi
+                // quy trình hiện tại, vẫn chờ người dùng bấm "Quét danh sách".
                 if (rows == null || rows.Count != 1)
                 {
                     _singlePatientPendingKey = "";
@@ -1578,6 +1577,11 @@ namespace PatientAppointmentManager
                 if(selected==null){ShowAppMessage(window,"Hãy chọn một bệnh nhân.");return;}
                 if(selected.ExistingAppointmentId>0 && selected.Status!="ĐÃ TRẢ HẸN"){ShowAppMessage(window,"Bệnh nhân đang có lịch hẹn. Hãy dùng nút Đổi lịch hoặc Trả hẹn lịch cũ.");return;}
                 if (CreateAppointmentFromScan(selected, window)) {
+                    // Đánh dấu cặp BN/số phiếu vừa tạo để bộ theo dõi tự động
+                    // không hiểu nhầm lịch vừa tạo là lịch trùng cần cảnh báo.
+                    _singlePatientNoticesShown.Add(
+                        (selected.PatientCode ?? "").Trim() + "|" +
+                        (selected.ReceiptCode ?? "").Trim());
                     selected.Status="ĐÃ CÓ LỊCH";
                     var match=Database.FindActiveAppointment(selected.PatientCode,selected.ReceiptCode);
                     if(match!=null){selected.ExistingAppointmentId=match.Id;selected.ExistingAppointmentDate=match.AppointmentDate.ToString("dd/MM/yyyy");selected.ExistingShift=match.Shift;}
