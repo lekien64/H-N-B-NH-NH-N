@@ -3,6 +3,7 @@
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:cef="clr-namespace:CefSharp.Wpf;assembly=CefSharp.Wpf"
  Title="Sổ hẹn CT"
+ Icon="/SoHenBN.ico"
  Height="800"
  Width="1300"
  MinHeight="680"

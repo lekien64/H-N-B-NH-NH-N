@@ -5,7 +5,8 @@
     <UseWPF>true</UseWPF>
     <LangVersion>7.3</LangVersion>
     <RootNamespace>PatientAppointmentManager</RootNamespace>
-    <AssemblyName>PatientAppointmentManager</AssemblyName>
+    <AssemblyName>SoHenBN</AssemblyName>
+    <ApplicationIcon>$(MSBuildProjectDirectory)\SoHenBN.ico</ApplicationIcon>
     <PlatformTarget>x64</PlatformTarget>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
