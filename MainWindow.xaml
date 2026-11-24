@@ -1,40 +1,14 @@
-<Window x:Class="PatientAppointmentManager.MainWindow"
+﻿<Window x:Class="PatientAppointmentManager.MainWindow"
  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
  xmlns:cef="clr-namespace:CefSharp.Wpf;assembly=CefSharp.Wpf"
- Title="Sổ hẹn BN"
+ Title="Sổ hẹn CT"
  Height="800"
  Width="1300"
  MinHeight="680"
  MinWidth="850"
  WindowStartupLocation="CenterScreen"
- Background="#EAF3F4" Language="vi-VN" UseLayoutRounding="True" SnapsToDevicePixels="True">
-
- <Window.Resources>
-  <!-- Kiểu nút phẳng, không bo góc/animation cho giao diện Windows Classic -->
-  <Style x:Key="ClassicButtonStyle" TargetType="Button">
-   <Setter Property="Background" Value="#E6E6E6"/>
-   <Setter Property="Foreground" Value="#111111"/>
-   <Setter Property="BorderBrush" Value="#808080"/>
-   <Setter Property="BorderThickness" Value="1"/>
-   <Setter Property="Padding" Value="8,3"/>
-   <Setter Property="FontWeight" Value="Normal"/>
-   <Setter Property="Template">
-    <Setter.Value>
-     <ControlTemplate TargetType="Button">
-      <Border x:Name="ButtonChrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" SnapsToDevicePixels="True">
-       <ContentPresenter Margin="{TemplateBinding Padding}" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" RecognizesAccessKey="True"/>
-      </Border>
-      <ControlTemplate.Triggers>
-       <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ButtonChrome" Property="Background" Value="#DCDCDC"/></Trigger>
-       <Trigger Property="IsPressed" Value="True"><Setter TargetName="ButtonChrome" Property="Background" Value="#C8C8C8"/></Trigger>
-       <Trigger Property="IsEnabled" Value="False"><Setter TargetName="ButtonChrome" Property="Opacity" Value="0.55"/></Trigger>
-      </ControlTemplate.Triggers>
-     </ControlTemplate>
-    </Setter.Value>
-   </Setter>
-  </Style>
- </Window.Resources>
+ Background="#EAF3F4" Language="vi-VN">
 
  <Grid>
   <Grid.ColumnDefinitions>
@@ -64,9 +38,9 @@
       </ControlTemplate></Setter.Value></Setter>
      </Style>
     </StackPanel.Resources>
-    <Button x:Name="AddNavButton" Content="🌐" ToolTip="Trình duyệt và quét danh sách" Click="AddTab_Click" Style="{StaticResource SidebarIconButton}" FontSize="26" FontFamily="Segoe UI Symbol" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
-    <Button x:Name="ListNavButton" Content="▦" ToolTip="Lịch đã hẹn" Click="ListTab_Click" Style="{StaticResource SidebarIconButton}" FontSize="26" FontFamily="Segoe UI Symbol" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
-    <Button x:Name="SettingsNavButton" Content="⚙" ToolTip="Cài đặt" Click="SettingsTab_Click" Style="{StaticResource SidebarIconButton}" FontSize="26" FontFamily="Segoe UI Symbol" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
+    <Button x:Name="AddNavButton" Content="🌐" ToolTip="Trình duyệt và quét danh sách" Click="AddTab_Click" Style="{StaticResource SidebarIconButton}"/>
+    <Button x:Name="ListNavButton" Content="▦" ToolTip="Lịch đã hẹn" Click="ListTab_Click" Style="{StaticResource SidebarIconButton}" FontSize="32"/>
+    <Button x:Name="SettingsNavButton" Content="⚙" ToolTip="Cài đặt" Click="SettingsTab_Click" Style="{StaticResource SidebarIconButton}" FontSize="27"/>
    </StackPanel>
   </Border>
 
@@ -146,7 +120,6 @@
     <Expander Grid.Row="2"
               Header="Nhập thủ công (mở khi cần)"
               IsExpanded="False"
-              Expanded="ManualEntryExpander_Expanded"
               Margin="0,10,0,0"
               Background="#F8FCFC"
               Padding="10">
@@ -373,13 +346,14 @@
       <TextBlock Text="Cài đặt" FontSize="25" FontWeight="Bold" Foreground="#18333D" Margin="0,0,0,16"/>
       <Border Background="White" BorderBrush="#D7E8E9" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
        <StackPanel>
-        <TextBlock Text="Giao diện" FontSize="18" FontWeight="Bold" Margin="0,0,0,8"/>
-        <TextBlock Text="Chọn giao diện. Giao diện tối giản tắt hiệu ứng trang trí và ưu tiên tiết kiệm tài nguyên; mọi chức năng vẫn được giữ nguyên." Foreground="#637780" Margin="0,0,0,8"/>
-        <ComboBox x:Name="PerformanceModeBox" Width="260" Height="34" HorizontalAlignment="Left" SelectedIndex="1">
-         <ComboBoxItem Content="Giao diện đầy đủ"/>
-         <ComboBoxItem Content="Giao diện tối giản"/>
+        <TextBlock Text="Hiệu năng" FontSize="18" FontWeight="Bold" Margin="0,0,0,8"/>
+        <TextBlock Text="Chọn cấu hình sẽ được áp dụng sau khi khởi động lại phần mềm." Foreground="#637780" Margin="0,0,0,8"/>
+        <ComboBox x:Name="PerformanceModeBox" Width="260" Height="34" HorizontalAlignment="Left" SelectedIndex="2">
+         <ComboBoxItem Content="Cấu hình cao"/>
+         <ComboBoxItem Content="Cấu hình trung bình"/>
+         <ComboBoxItem Content="Cấu hình thấp"/>
         </ComboBox>
-        <Button Content="Lưu giao diện" Width="140" Height="36" HorizontalAlignment="Left" Margin="0,10,0,0" Click="SaveSettings_Click"/>
+        <Button Content="Lưu cấu hình" Width="140" Height="36" HorizontalAlignment="Left" Margin="0,10,0,0" Click="SaveSettings_Click"/>
         <TextBlock x:Name="SettingsStatusText" Foreground="#637780" Margin="0,8,0,0"/>
        </StackPanel>
       </Border>
@@ -392,6 +366,18 @@
          <Button Content="Khôi phục từ file" Width="145" Height="36" Margin="0,0,8,0" Click="RestoreDatabase_Click"/>
          <Button Content="Mở thư mục dữ liệu" Width="150" Height="36" Click="OpenDataFolder_Click"/>
         </WrapPanel>
+       </StackPanel>
+      </Border>
+      <Border Background="White" BorderBrush="#D7E8E9" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">
+       <StackPanel>
+        <TextBlock Text="Sao lưu đám mây Google Drive" FontSize="18" FontWeight="Bold" Margin="0,0,0,8"/>
+        <TextBlock Text="Đăng nhập bằng tài khoản Google Drive chung. Ứng dụng chỉ xin quyền quản lý các tệp do SoHenBN tạo." Foreground="#637780" TextWrapping="Wrap" Margin="0,0,0,10"/>
+        <WrapPanel>
+         <Button Content="Kết nối / đăng nhập Google" Width="210" Height="36" Margin="0,0,8,8" Click="ConnectGoogleDrive_Click"/>
+         <Button Content="Sao lưu Drive ngay" Width="150" Height="36" Margin="0,0,8,8" Click="CloudBackupNow_Click"/>
+        </WrapPanel>
+        <TextBlock x:Name="GoogleDriveStatusText" Text="Chưa kết nối Google Drive." Foreground="#637780" TextWrapping="Wrap" Margin="0,4,0,6"/>
+        <TextBlock Text="Lịch tự động: 16:30 mỗi ngày khi phần mềm đang chạy. Chỉ tải lên khi cơ sở dữ liệu thay đổi. Lưu tối đa 30 bản ngày, 12 bản tuần và 12 bản tháng." Foreground="#637780" TextWrapping="Wrap"/>
        </StackPanel>
       </Border>
       <Border Background="White" BorderBrush="#D7E8E9" BorderThickness="1" CornerRadius="12" Padding="16" Margin="0,0,0,12">

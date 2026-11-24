@@ -1,5 +1,4 @@
-using System.Windows.Media.Effects;
-using System;
+﻿using System;
 using System.IO;
 using System.Diagnostics;
 using System.Data;
@@ -16,11 +15,11 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Threading;
-using System.Windows.Media;
 using CefSharp;
 using CefSharp.Wpf;
 using PatientAppointmentManager.Data;
 using PatientAppointmentManager.Models;
+using Google.Apis.Drive.v3;
 
 namespace PatientAppointmentManager
 {
@@ -29,7 +28,6 @@ namespace PatientAppointmentManager
         public MainWindow()
         {
             InitializeComponent();
-            Loaded += MainWindow_Loaded;
 
             Database.Initialize();
             LoadAppSettings();
@@ -44,6 +42,7 @@ namespace PatientAppointmentManager
             ConfigureBrowserTab(FirstBrowserTab, AddHospitalBrowser, "Trang 1");
             RegisterBrowser(AddHospitalBrowser);
             LoadBrowserHistory(AddUrlBox);
+            StartCloudBackupScheduler();
         }
 
 
@@ -59,283 +58,215 @@ namespace PatientAppointmentManager
             }
         }
 
-        private string CurrentPerformanceMode = "minimal";
-        private readonly List<Action> _fullAppearanceRestorers = new List<Action>();
-        private readonly HashSet<DependencyObject> _capturedAppearanceNodes = new HashSet<DependencyObject>();
-        private readonly Dictionary<DataGridColumn, Style> _fullGridHeaderStyles = new Dictionary<DataGridColumn, Style>();
+        private string CurrentPerformanceMode = "low";
 
         private void LoadAppSettings()
         {
-            bool createDefaultSettings = !File.Exists(SettingsFilePath);
-            CurrentPerformanceMode = "minimal"; // Mặc định giao diện tối giản khi cài mới.
-
             try
             {
-                if (!createDefaultSettings)
+                if (File.Exists(SettingsFilePath))
                 {
                     var serializer = new JavaScriptSerializer();
                     var values = serializer.Deserialize<Dictionary<string, string>>(
                         File.ReadAllText(SettingsFilePath, Encoding.UTF8));
                     if (values != null && values.ContainsKey("PerformanceMode"))
-                    {
-                        string savedMode = (values["PerformanceMode"] ?? "").Trim().ToLowerInvariant();
-                        if (savedMode == "full" || savedMode == "minimal")
-                            CurrentPerformanceMode = savedMode;
-                        else if (savedMode == "low") CurrentPerformanceMode = "minimal";
-                        else if (savedMode == "high" || savedMode == "balanced") CurrentPerformanceMode = "full";
-                        else
-                            createDefaultSettings = true;
-                    }
-                    else
-                    {
-                        createDefaultSettings = true;
-                    }
+                        CurrentPerformanceMode = values["PerformanceMode"];
                 }
             }
-            catch
-            {
-                // Tệp cấu hình lỗi/không đọc được: quay về giao diện tối giản.
-                CurrentPerformanceMode = "minimal";
-                createDefaultSettings = true;
-            }
-
-            if (createDefaultSettings)
-                WritePerformanceSetting(CurrentPerformanceMode);
+            catch { CurrentPerformanceMode = "low"; }
 
             if (PerformanceModeBox != null)
                 PerformanceModeBox.SelectedIndex =
-                    CurrentPerformanceMode == "full" ? 0 : 1;
+                    CurrentPerformanceMode == "high" ? 0 :
+                    CurrentPerformanceMode == "balanced" ? 1 : 2;
 
-            // Giao diện được áp dụng trong sự kiện Loaded, khi Visual Tree đã được dựng đầy đủ.
-        }
-
-        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
-        {
             ApplyPerformanceMode(CurrentPerformanceMode);
-        }
-
-        private void WritePerformanceSetting(string mode)
-        {
-            var values = new Dictionary<string, string>();
-            values["PerformanceMode"] = mode;
-            File.WriteAllText(SettingsFilePath,
-                new JavaScriptSerializer().Serialize(values), Encoding.UTF8);
-        }
-
-        private void CaptureFullAppearance()
-        {
-            // Capture cả các vùng vừa được tạo khi người dùng mở trang/Expander.
-            // HashSet ngăn lưu trùng và luôn giữ lại trạng thái giao diện gốc trước khi làm phẳng.
-            CaptureAppearanceRecursive(this);
-        }
-
-        private void CaptureAppearanceRecursive(DependencyObject node)
-        {
-            if (node == null || !_capturedAppearanceNodes.Add(node)) return;
-
-            var border = node as Border;
-            if (border != null)
-            {
-                CornerRadius radius = border.CornerRadius;
-                Brush background = border.Background;
-                Brush borderBrush = border.BorderBrush;
-                Thickness borderThickness = border.BorderThickness;
-                Effect effect = border.Effect;
-                _fullAppearanceRestorers.Add(() =>
-                {
-                    border.CornerRadius = radius; border.Background = background;
-                    border.BorderBrush = borderBrush; border.BorderThickness = borderThickness; border.Effect = effect;
-                });
-            }
-
-            var control = node as Control;
-            if (control != null)
-            {
-                Brush background = control.Background;
-                Brush foreground = control.Foreground;
-                Brush borderBrush = control.BorderBrush;
-                Thickness borderThickness = control.BorderThickness;
-                Style style = control.Style;
-                FontWeight fontWeight = control.FontWeight;
-                _fullAppearanceRestorers.Add(() =>
-                {
-                    control.Background = background; control.Foreground = foreground;
-                    control.BorderBrush = borderBrush; control.BorderThickness = borderThickness;
-                    control.Style = style; control.FontWeight = fontWeight;
-                });
-            }
-
-            var text = node as TextBlock;
-            if (text != null)
-            {
-                Brush foreground = text.Foreground;
-                _fullAppearanceRestorers.Add(() => text.Foreground = foreground);
-            }
-
-            var panel = node as Panel;
-            if (panel != null)
-            {
-                Brush background = panel.Background;
-                _fullAppearanceRestorers.Add(() => panel.Background = background);
-            }
-
-            int count = VisualTreeHelper.GetChildrenCount(node);
-            for (int i = 0; i < count; i++) CaptureAppearanceRecursive(VisualTreeHelper.GetChild(node, i));
-        }
-
-        private void ApplyMinimalAppearanceRecursive(DependencyObject node, bool insideDataGrid)
-        {
-            bool inGrid = insideDataGrid || node is DataGrid;
-            var border = node as Border;
-            if (border != null)
-            {
-                border.CornerRadius = new CornerRadius(0);
-                border.Effect = null;
-                if (border.Background != null && border.Background != Brushes.Transparent)
-                    border.Background = new SolidColorBrush(Color.FromRgb(245, 245, 245));
-                if (border.BorderThickness.Left + border.BorderThickness.Top + border.BorderThickness.Right + border.BorderThickness.Bottom > 0)
-                    border.BorderBrush = new SolidColorBrush(Color.FromRgb(160, 160, 160));
-            }
-
-            var button = node as Button;
-            if (button != null)
-            {
-                bool isSidebarButton = button == AddNavButton || button == ListNavButton || button == SettingsNavButton;
-                if (!isSidebarButton)
-                    button.Style = (Style)FindResource("ClassicButtonStyle");
-                button.Background = new SolidColorBrush(Color.FromRgb(230, 230, 230));
-                button.Foreground = Brushes.Black;
-                button.BorderBrush = new SolidColorBrush(Color.FromRgb(128, 128, 128));
-                button.BorderThickness = new Thickness(1);
-                button.FontWeight = FontWeights.Normal;
-            }
-            else
-            {
-                var control = node as Control;
-                if (control != null)
-                {
-                    control.Background = (control is TextBox || control is ComboBox || control is DatePicker || control is DataGrid)
-                        ? Brushes.White : FlattenBrush(control.Background);
-                    control.Foreground = Brushes.Black;
-                    control.BorderBrush = new SolidColorBrush(Color.FromRgb(128, 128, 128));
-                    control.BorderThickness = new Thickness(1);
-                    control.FontWeight = FontWeights.Normal;
-                }
-            }
-
-            var text = node as TextBlock;
-            if (text != null && !inGrid) text.Foreground = Brushes.Black;
-
-            var panel = node as Panel;
-            if (panel != null && panel.Background != null && panel.Background != Brushes.Transparent)
-                panel.Background = new SolidColorBrush(Color.FromRgb(245, 245, 245));
-
-            int count = VisualTreeHelper.GetChildrenCount(node);
-            for (int i = 0; i < count; i++) ApplyMinimalAppearanceRecursive(VisualTreeHelper.GetChild(node, i), inGrid);
-        }
-
-        private Brush FlattenBrush(Brush brush)
-        {
-            var gradient = brush as GradientBrush;
-            if (gradient != null && gradient.GradientStops.Count > 0)
-                return new SolidColorBrush(gradient.GradientStops[0].Color);
-            return brush;
         }
 
         private void ApplyPerformanceMode(string mode)
         {
-            CurrentPerformanceMode = mode == "full" ? "full" : "minimal";
-            CaptureFullAppearance();
+            CurrentPerformanceMode = mode;
+            bool low = mode == "low";
+            bool balanced = mode == "balanced";
 
-            if (AppointmentsGrid != null)
+            // Tối giản hiển thị khi chạy cấu hình thấp/trung bình.
+            if (low || balanced)
             {
-                AppointmentsGrid.EnableRowVirtualization = true;
-                AppointmentsGrid.EnableColumnVirtualization = true;
-                VirtualizingPanel.SetIsVirtualizing(AppointmentsGrid, true);
-                VirtualizingPanel.SetVirtualizationMode(AppointmentsGrid, VirtualizationMode.Recycling);
-                ScrollViewer.SetCanContentScroll(AppointmentsGrid, true);
-            }
-
-            if (CurrentPerformanceMode == "minimal")
-            {
-                Background = new SolidColorBrush(Color.FromRgb(240, 240, 240));
-                if (Sidebar != null) Sidebar.Background = new SolidColorBrush(Color.FromRgb(224, 224, 224));
-                if (MainContentPanel != null) MainContentPanel.Background = new SolidColorBrush(Color.FromRgb(240, 240, 240));
-                ApplyMinimalAppearanceRecursive(this, false);
-                ApplyMinimalDataGridStyle();
-                UpdateSidebarSelection(GetCurrentViewName());
+                Background = System.Windows.Media.Brushes.WhiteSmoke;
+                if (AddView != null) AddView.Background = System.Windows.Media.Brushes.WhiteSmoke;
+                if (ListView != null) ListView.Background = System.Windows.Media.Brushes.WhiteSmoke;
+                if (SettingsView != null) SettingsView.Background = System.Windows.Media.Brushes.WhiteSmoke;
+                if (MainContentPanel != null) MainContentPanel.Background = System.Windows.Media.Brushes.WhiteSmoke;
+                if (AppointmentsGrid != null)
+                {
+                    AppointmentsGrid.EnableRowVirtualization = true;
+                    AppointmentsGrid.EnableColumnVirtualization = true;
+                    VirtualizingPanel.SetIsVirtualizing(AppointmentsGrid, true);
+                    VirtualizingPanel.SetVirtualizationMode(AppointmentsGrid, VirtualizationMode.Recycling);
+                }
             }
             else
             {
-                foreach (Action restore in _fullAppearanceRestorers) restore();
-                foreach (var entry in _fullGridHeaderStyles) entry.Key.HeaderStyle = entry.Value;
-                _fullGridHeaderStyles.Clear();
-                if (AppointmentsGrid != null)
-                {
-                    AppointmentsGrid.RowHeight = 34;
-                    AppointmentsGrid.ColumnHeaderHeight = 36;
-                    AppointmentsGrid.AlternatingRowBackground = new SolidColorBrush(Color.FromRgb(248, 251, 252));
-                    AppointmentsGrid.HorizontalGridLinesBrush = new SolidColorBrush(Color.FromRgb(225, 233, 236));
-                    AppointmentsGrid.VerticalGridLinesBrush = new SolidColorBrush(Color.FromRgb(238, 242, 244));
-                }
-                Background = new SolidColorBrush(Color.FromRgb(234, 243, 244));
-                UpdateSidebarSelection(GetCurrentViewName());
-            }
-        }
-
-        private string GetCurrentViewName()
-        {
-            if (ListView != null && ListView.Visibility == Visibility.Visible) return "list";
-            if (SettingsView != null && SettingsView.Visibility == Visibility.Visible) return "settings";
-            return "add";
-        }
-
-        private void ApplyMinimalDataGridStyle()
-        {
-            if (AppointmentsGrid == null) return;
-            AppointmentsGrid.Background = Brushes.White;
-            AppointmentsGrid.Foreground = Brushes.Black;
-            AppointmentsGrid.BorderBrush = new SolidColorBrush(Color.FromRgb(128, 128, 128));
-            AppointmentsGrid.RowBackground = Brushes.White;
-            AppointmentsGrid.AlternatingRowBackground = Brushes.White;
-            AppointmentsGrid.HorizontalGridLinesBrush = new SolidColorBrush(Color.FromRgb(210, 210, 210));
-            AppointmentsGrid.VerticalGridLinesBrush = new SolidColorBrush(Color.FromRgb(225, 225, 225));
-            AppointmentsGrid.GridLinesVisibility = DataGridGridLinesVisibility.Horizontal;
-            foreach (var column in AppointmentsGrid.Columns)
-            {
-                if (!_fullGridHeaderStyles.ContainsKey(column)) _fullGridHeaderStyles[column] = column.HeaderStyle;
-                column.HeaderStyle = new Style(typeof(DataGridColumnHeader))
-                {
-                    Setters = {
-                        new Setter(Control.BackgroundProperty, new SolidColorBrush(Color.FromRgb(230, 230, 230))),
-                        new Setter(Control.ForegroundProperty, Brushes.Black),
-                        new Setter(Control.BorderBrushProperty, new SolidColorBrush(Color.FromRgb(160, 160, 160))),
-                        new Setter(Control.BorderThicknessProperty, new Thickness(0, 0, 0, 1)),
-                        new Setter(Control.FontWeightProperty, FontWeights.Normal),
-                        new Setter(Control.PaddingProperty, new Thickness(4, 3, 4, 3))
-                    }
-                };
+                Background = new System.Windows.Media.SolidColorBrush(
+                    System.Windows.Media.Color.FromRgb(234, 243, 244));
+                if (MainContentPanel != null)
+                    MainContentPanel.Background = new System.Windows.Media.LinearGradientBrush(
+                        System.Windows.Media.Color.FromRgb(244, 250, 250),
+                        System.Windows.Media.Color.FromRgb(230, 241, 242), 45);
             }
         }
 
         private void SaveSettings_Click(object sender, RoutedEventArgs e)
         {
             var item = PerformanceModeBox.SelectedItem as ComboBoxItem;
-            string mode = item == null ? "minimal" : (PerformanceModeBox.SelectedIndex == 0 ? "full" : "minimal");
+            string mode = item == null ? "low" :
+                (PerformanceModeBox.SelectedIndex == 0 ? "high" :
+                PerformanceModeBox.SelectedIndex == 1 ? "balanced" : "low");
 
             try
             {
-                WritePerformanceSetting(mode);
-                ApplyPerformanceMode(mode);
-                SettingsStatusText.Text = mode == "minimal"
-                    ? "Đã lưu và áp dụng Giao diện tối giản."
-                    : "Đã lưu và áp dụng Giao diện đầy đủ.";
-                ShowAppMessage(SettingsStatusText.Text);
+                var values = ReadAppSettings();
+                values["PerformanceMode"] = mode;
+                WriteAppSettings(values);
+                SettingsStatusText.Text = "Đã lưu. Cấu hình mới áp dụng sau khi khởi động lại.";
+                ShowAppMessage("Đã lưu cấu hình. Vui lòng khởi động lại phần mềm để áp dụng đầy đủ.");
             }
             catch (Exception ex)
             {
                 ShowAppMessage("Không thể lưu cài đặt: " + ex.Message);
             }
+        }
+
+        private DispatcherTimer cloudBackupTimer;
+        private GoogleDriveBackupService cloudDrive;
+        private bool cloudBackupBusy;
+        private const string AppointmentDatabasePath = "";
+
+        private Dictionary<string, string> ReadAppSettings()
+        {
+            try
+            {
+                if (File.Exists(SettingsFilePath))
+                    return new JavaScriptSerializer().Deserialize<Dictionary<string, string>>(File.ReadAllText(SettingsFilePath, Encoding.UTF8)) ?? new Dictionary<string, string>();
+            }
+            catch { }
+            return new Dictionary<string, string>();
+        }
+
+        private void WriteAppSettings(Dictionary<string, string> values)
+        {
+            File.WriteAllText(SettingsFilePath, new JavaScriptSerializer().Serialize(values), Encoding.UTF8);
+        }
+
+        private string CloudDatabasePath
+        {
+            get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PatientAppointmentManager", "appointments.db"); }
+        }
+
+        private void StartCloudBackupScheduler()
+        {
+            cloudBackupTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(1) };
+            cloudBackupTimer.Tick += async (s, e) =>
+            {
+                if (cloudBackupBusy || cloudDrive == null || DateTime.Now.TimeOfDay < new TimeSpan(16, 30, 0)) return;
+                string today = DateTime.Today.ToString("yyyy-MM-dd");
+                var settings = ReadAppSettings();
+                if (settings.ContainsKey("LastCloudBackupDate") && settings["LastCloudBackupDate"] == today) return;
+                await PerformCloudBackupAsync(false);
+            };
+            cloudBackupTimer.Start();
+            // Khi đã từng kết nối, thử khôi phục phiên đã cấp quyền trước đó.
+            var saved = ReadAppSettings();
+            if (saved.ContainsKey("GoogleOAuthJsonPath") && File.Exists(saved["GoogleOAuthJsonPath"]))
+                _ = RestoreCloudSessionAsync(saved["GoogleOAuthJsonPath"]);
+        }
+
+        private async Task RestoreCloudSessionAsync(string jsonPath)
+        {
+            try
+            {
+                cloudDrive = await GoogleDriveBackupService.ConnectAsync(jsonPath);
+                string account = await cloudDrive.GetAccountAsync();
+                GoogleDriveStatusText.Text = "Đã kết nối Google Drive: " + account;
+            }
+            catch (Exception ex) { GoogleDriveStatusText.Text = "Chưa kết nối Drive: " + ex.Message; }
+        }
+
+        private async void ConnectGoogleDrive_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Title = "Chọn file OAuth Client JSON đã tải từ Google Cloud",
+                Filter = "OAuth client JSON (*.json)|*.json|All files (*.*)|*.*"
+            };
+            var saved = ReadAppSettings();
+            if (saved.ContainsKey("GoogleOAuthJsonPath")) dialog.FileName = saved["GoogleOAuthJsonPath"];
+            if (dialog.ShowDialog(this) != true) return;
+            try
+            {
+                GoogleDriveStatusText.Text = "Đang mở đăng nhập Google...";
+                cloudDrive = await GoogleDriveBackupService.ConnectAsync(dialog.FileName);
+                string account = await cloudDrive.GetAccountAsync();
+                saved["GoogleOAuthJsonPath"] = dialog.FileName;
+                WriteAppSettings(saved);
+                GoogleDriveStatusText.Text = "Đã kết nối Google Drive: " + account;
+                ShowAppMessage("Đã kết nối Google Drive thành công. Tài khoản: " + account);
+            }
+            catch (Exception ex)
+            {
+                cloudDrive = null;
+                GoogleDriveStatusText.Text = "Kết nối thất bại: " + ex.Message;
+                ShowAppMessage("Không thể kết nối Google Drive:\n" + ex.Message, "Lỗi Google OAuth", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private async void CloudBackupNow_Click(object sender, RoutedEventArgs e)
+        {
+            if (cloudDrive == null)
+            {
+                ShowAppMessage("Bạn cần kết nối Google Drive trước.");
+                return;
+            }
+            await PerformCloudBackupAsync(true);
+        }
+
+        private async Task PerformCloudBackupAsync(bool force)
+        {
+            if (cloudDrive == null || cloudBackupBusy) return;
+            cloudBackupBusy = true;
+            try
+            {
+                if (!File.Exists(CloudDatabasePath)) throw new FileNotFoundException("Không tìm thấy cơ sở dữ liệu lịch hẹn.", CloudDatabasePath);
+                string hash = GoogleDriveBackupService.Sha256(CloudDatabasePath);
+                var settings = ReadAppSettings();
+                string lastHash = settings.ContainsKey("LastCloudBackupHash") ? settings["LastCloudBackupHash"] : "";
+                string today = DateTime.Today.ToString("yyyy-MM-dd");
+                if (!force && hash == lastHash)
+                {
+                    settings["LastCloudBackupDate"] = today;
+                    WriteAppSettings(settings);
+                    GoogleDriveStatusText.Text = "16:30: Dữ liệu không thay đổi, bỏ qua sao lưu hôm nay.";
+                    return;
+                }
+
+                string localBackup = Database.BackupDatabase();
+                await cloudDrive.UploadSnapshotAsync(localBackup, "DAY", hash);
+                if (DateTime.Today.DayOfWeek == DayOfWeek.Monday)
+                    await cloudDrive.UploadSnapshotAsync(localBackup, "WEEK", hash);
+                if (DateTime.Today.Day == 1)
+                    await cloudDrive.UploadSnapshotAsync(localBackup, "MONTH", hash);
+                settings["LastCloudBackupHash"] = hash;
+                settings["LastCloudBackupDate"] = today;
+                WriteAppSettings(settings);
+                GoogleDriveStatusText.Text = "Sao lưu Google Drive thành công lúc " + DateTime.Now.ToString("HH:mm:ss") + ".";
+                if (force) ShowAppMessage("Đã tải bản sao lưu lên Google Drive thành công.");
+            }
+            catch (Exception ex)
+            {
+                GoogleDriveStatusText.Text = "Sao lưu Drive thất bại: " + ex.Message;
+                if (force) ShowAppMessage("Sao lưu Google Drive thất bại:\n" + ex.Message, "Lỗi sao lưu", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+            finally { cloudBackupBusy = false; }
         }
 
         private void BackupDatabase_Click(object sender, RoutedEventArgs e)
@@ -471,33 +402,8 @@ namespace PatientAppointmentManager
             SettingsView.Visibility = name == "settings" ? Visibility.Visible : Visibility.Collapsed;
 
             UpdateSidebarSelection(name);
-            if (name == "list") LoadAppointments();
-
-            // Một số vùng (đặc biệt SettingsView/ScrollViewer) chỉ tạo visual tree khi được mở.
-            // Chụp trạng thái gốc của các phần tử mới trước khi áp dụng giao diện tối giản.
-            Grid activeView = name == "settings" ? SettingsView : (name == "list" ? ListView : AddView);
-            Dispatcher.BeginInvoke(new Action(() =>
-            {
-                CaptureAppearanceRecursive(activeView);
-                if (CurrentPerformanceMode == "minimal")
-                {
-                    ApplyMinimalAppearanceRecursive(activeView, false);
-                    if (name == "list") ApplyMinimalDataGridStyle();
-                    UpdateSidebarSelection(name);
-                }
-            }), DispatcherPriority.Loaded);
-        }
-
-        private void ManualEntryExpander_Expanded(object sender, RoutedEventArgs e)
-        {
-            var expander = sender as Expander;
-            if (expander == null) return;
-            Dispatcher.BeginInvoke(new Action(() =>
-            {
-                CaptureAppearanceRecursive(expander);
-                if (CurrentPerformanceMode == "minimal")
-                    ApplyMinimalAppearanceRecursive(expander, false);
-            }), DispatcherPriority.Loaded);
+            if (name == "list")
+                LoadAppointments();
         }
 
         private void UpdateSidebarSelection(string selected)
@@ -507,27 +413,16 @@ namespace PatientAppointmentManager
             SetNavButtonState(SettingsNavButton, selected == "settings");
         }
 
-        private void SetNavButtonState(Button button, bool selected)
+        private static void SetNavButtonState(Button button, bool selected)
         {
-            if (CurrentPerformanceMode == "minimal")
-            {
-                button.Background = selected
-                    ? new SolidColorBrush(Color.FromRgb(205, 205, 205))
-                    : new SolidColorBrush(Color.FromRgb(238, 238, 238));
-                button.BorderBrush = new SolidColorBrush(Color.FromRgb(128, 128, 128));
-                button.BorderThickness = new Thickness(1);
-                button.Foreground = Brushes.Black;
-                // Giữ nguyên style căn giữa riêng của ba nút điều hướng.
-                return;
-            }
             button.Background = selected
-                ? new SolidColorBrush(Color.FromRgb(190, 235, 229))
-                : Brushes.White;
+                ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(190, 235, 229))
+                : System.Windows.Media.Brushes.White;
             button.BorderBrush = selected
-                ? new SolidColorBrush(Color.FromRgb(63, 174, 160))
-                : new SolidColorBrush(Color.FromRgb(214, 232, 232));
+                ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(63, 174, 160))
+                : new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(214, 232, 232));
             button.BorderThickness = selected ? new Thickness(2) : new Thickness(1);
-            button.Foreground = new SolidColorBrush(Color.FromRgb(22, 125, 125));
+            button.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(22, 125, 125));
         }
 
         private ChromiumWebBrowser ActiveBrowser
@@ -1922,7 +1817,7 @@ namespace PatientAppointmentManager
                 {
                     AddGridCellTrigger(cellStyle, "Có tiêm", System.Windows.Media.Color.FromRgb(210,242,218), System.Windows.Media.Color.FromRgb(75,170,105), System.Windows.Media.Color.FromRgb(24,112,55));
                     AddGridCellTrigger(cellStyle, "Không tiêm", System.Windows.Media.Color.FromRgb(232,237,242), System.Windows.Media.Color.FromRgb(145,158,170), System.Windows.Media.Color.FromRgb(75,87,96));
-                    AddGridCellTrigger(cellStyle, "Chưa xác định", System.Windows.Media.Color.FromRgb(238,238,238), System.Windows.Media.Color.FromRgb(160,160,160), System.Windows.Media.Color.FromRgb(70,70,70));
+                    AddGridCellTrigger(cellStyle, "Chưa xác định", System.Windows.Media.Color.FromRgb(255,229,199), System.Windows.Media.Color.FromRgb(220,145,65), System.Windows.Media.Color.FromRgb(150,83,12));
                 }
                 var column = new DataGridTextColumn
                 {
@@ -1939,7 +1834,6 @@ namespace PatientAppointmentManager
                 };
                 AppointmentsGrid.Columns.Add(column);
             }
-            if (CurrentPerformanceMode == "minimal") ApplyMinimalDataGridStyle();
         }
 
         private void AppointmentsGrid_Sorting(object sender, DataGridSortingEventArgs e)
