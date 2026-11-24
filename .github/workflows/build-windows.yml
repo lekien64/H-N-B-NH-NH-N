@@ -33,37 +33,30 @@ jobs:
             throw "MSBuild failed: $LASTEXITCODE"
           }
 
-      - name: Locate and collect SoHenBN files
+            - name: Locate and collect SoHenBN files
         shell: pwsh
         run: |
           $root = $env:GITHUB_WORKSPACE
           $publish = Join-Path $root "publish"
 
-          # Tìm EXE ở tất cả thư mục, kể cả obj
           $exe = Get-ChildItem -Path $root `
             -Recurse -File `
-            -Filter "SoHenBN.exe" |
+            -Include "PatientAppointmentManager.exe","SoHenBN.exe" |
             Where-Object {
-              $_.FullName -notmatch '[\\/](\.git)[\\/]'
+              $_.FullName -notmatch '[\\/](\.git|obj)[\\/]'
             } |
             Sort-Object {
               if ($_.FullName -match '[\\/]bin[\\/]') { 0 }
-              elseif ($_.FullName -match '[\\/]obj[\\/]') { 1 }
-              else { 2 }
+              else { 1 }
             } |
             Select-Object -First 1
 
           if (-not $exe) {
-            Write-Host "Không tìm thấy SoHenBN.exe"
             Get-ChildItem $root -Recurse -Filter "*.exe" |
               Select-Object -ExpandProperty FullName
-            throw "SoHenBN.exe was not found."
+            throw "Không tìm thấy file EXE."
           }
 
-          Write-Host "Đã tìm thấy EXE:"
-          Write-Host $exe.FullName
-
-          # Tạo thư mục phát hành
           if (Test-Path $publish) {
             Remove-Item $publish -Recurse -Force
           }
@@ -71,22 +64,18 @@ jobs:
           New-Item -ItemType Directory -Path $publish -Force |
             Out-Null
 
-          # Sao chép toàn bộ file cùng thư mục chứa EXE
           Copy-Item -Path (Join-Path $exe.DirectoryName '*') `
-            -Destination $publish `
-            -Recurse -Force
+            -Destination $publish -Recurse -Force
 
-          # Kiểm tra file EXE sau khi sao chép
-          $finalExe = Join-Path $publish "SoHenBN.exe"
+          $finalExe = Join-Path $publish $exe.Name
 
           if (-not (Test-Path $finalExe)) {
-            throw "Không có SoHenBN.exe trong thư mục phát hành."
+            throw "Không tìm thấy EXE trong thư mục phát hành."
           }
 
-          Write-Host "Đã thu thập thành công:"
+          Write-Host "Đã thu thập thành công: $($exe.Name)"
           Get-ChildItem $publish -Recurse -File |
-            Select-Object Name, Length |
-            Format-Table -AutoSize
+            Select-Object Name, Length
 
       - name: Upload build files
         uses: actions/upload-artifact@v4
