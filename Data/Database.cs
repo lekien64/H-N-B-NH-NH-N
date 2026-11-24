@@ -3,6 +3,7 @@ using System;
 using System.Data;
 using System.Data.SQLite;
 using System.IO;
+using System.Security.Cryptography;
 using PatientAppointmentManager.Models;
 
 namespace PatientAppointmentManager.Data
@@ -507,6 +508,25 @@ VALUES(@id, 'Đổi lịch', @now, @note)";
             }
         }
 
+
+        /// <summary>
+        /// Returns a stable revision fingerprint for the current SQLite file.
+        /// SmartBackupService uses it to skip backups when the database is unchanged.
+        /// </summary>
+        public static long GetDataRevision()
+        {
+            if (!File.Exists(DbPath))
+                Initialize();
+
+            using (var stream = new FileStream(
+                DbPath, FileMode.Open, FileAccess.Read,
+                FileShare.ReadWrite | FileShare.Delete))
+            using (var sha256 = SHA256.Create())
+            {
+                byte[] hash = sha256.ComputeHash(stream);
+                return BitConverter.ToInt64(hash, 0);
+            }
+        }
 
         public static string BackupDatabase()
         {
