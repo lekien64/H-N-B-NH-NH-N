@@ -255,23 +255,30 @@ namespace PatientAppointmentManager
         {
             var template = new ControlTemplate(typeof(Button));
             var border = new FrameworkElementFactory(typeof(Border));
+            var templatedParent = new System.Windows.Data.RelativeSource(
+                System.Windows.Data.RelativeSourceMode.TemplatedParent);
+
+            // FrameworkElementFactory.SetBinding requires BindingBase. A
+            // TemplateBindingExtension is a XAML markup extension, not a BindingBase.
             border.SetBinding(Border.BackgroundProperty,
-                new System.Windows.TemplateBindingExtension(Control.BackgroundProperty));
+                new System.Windows.Data.Binding("Background") { RelativeSource = templatedParent });
             border.SetBinding(Border.BorderBrushProperty,
-                new System.Windows.TemplateBindingExtension(Control.BorderBrushProperty));
+                new System.Windows.Data.Binding("BorderBrush") { RelativeSource = templatedParent });
             border.SetBinding(Border.BorderThicknessProperty,
-                new System.Windows.TemplateBindingExtension(Control.BorderThicknessProperty));
+                new System.Windows.Data.Binding("BorderThickness") { RelativeSource = templatedParent });
             border.SetBinding(Border.PaddingProperty,
-                new System.Windows.TemplateBindingExtension(Control.PaddingProperty));
+                new System.Windows.Data.Binding("Padding") { RelativeSource = templatedParent });
+
             var presenter = new FrameworkElementFactory(typeof(ContentPresenter));
             presenter.SetBinding(ContentPresenter.ContentProperty,
-                new System.Windows.TemplateBindingExtension(ContentControl.ContentProperty));
+                new System.Windows.Data.Binding("Content") { RelativeSource = templatedParent });
             presenter.SetBinding(ContentPresenter.ContentTemplateProperty,
-                new System.Windows.TemplateBindingExtension(ContentControl.ContentTemplateProperty));
+                new System.Windows.Data.Binding("ContentTemplate") { RelativeSource = templatedParent });
             presenter.SetBinding(ContentPresenter.HorizontalAlignmentProperty,
-                new System.Windows.TemplateBindingExtension(Control.HorizontalContentAlignmentProperty));
+                new System.Windows.Data.Binding("HorizontalContentAlignment") { RelativeSource = templatedParent });
             presenter.SetBinding(ContentPresenter.VerticalAlignmentProperty,
-                new System.Windows.TemplateBindingExtension(Control.VerticalContentAlignmentProperty));
+                new System.Windows.Data.Binding("VerticalContentAlignment") { RelativeSource = templatedParent });
+
             border.AppendChild(presenter);
             template.VisualTree = border;
             return template;
