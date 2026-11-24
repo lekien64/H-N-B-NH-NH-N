@@ -11,6 +11,10 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <None Remove="SoHenBN.ico" />
+    <Resource Include="SoHenBN.ico" />
+  </ItemGroup>
+  <ItemGroup>
     <Reference Include="System.Security" />
     <Reference Include="System.Web" />
     <Reference Include="System.Web.Extensions" />
