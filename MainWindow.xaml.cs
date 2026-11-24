@@ -787,8 +787,12 @@ namespace PatientAppointmentManager
                 // quy trình hiện tại, vẫn chờ người dùng bấm "Quét danh sách".
                 if (rows == null || rows.Count != 1)
                 {
+                    // Kết quả đã rời trạng thái một bệnh nhân (đang tải, rỗng
+                    // hoặc nhiều dòng): kết thúc chu kỳ cũ để lượt tra cứu kế
+                    // tiếp có thể phát thông báo, kể cả khi là bệnh nhân khác.
                     _singlePatientPendingKey = "";
                     _singlePatientStablePolls = 0;
+                    _singlePatientNoticesShown.Clear();
                     return;
                 }
 
@@ -800,17 +804,25 @@ namespace PatientAppointmentManager
                     return;
 
                 string key = patient + "|" + receipt;
+
+                // Khi trang chuyển sang bệnh nhân khác, chỉ giữ trạng thái
+                // chống lặp cho kết quả hiện tại. Không để dấu đã thông báo
+                // của bệnh nhân trước chặn các bệnh nhân tra cứu tiếp theo.
+                if (!string.Equals(_singlePatientPendingKey, key, StringComparison.OrdinalIgnoreCase))
+                {
+                    _singlePatientNoticesShown.Clear();
+                    _singlePatientPendingKey = key;
+                    _singlePatientStablePolls = 1;
+                }
+                else
+                {
+                    _singlePatientStablePolls++;
+                }
+
                 if (_singlePatientNoticesShown.Contains(key)) return;
 
                 // Đợi cùng một dòng ổn định qua hai lần đọc để tránh popup khi
                 // bảng đang tải dở và tạm thời mới có một dòng.
-                if (string.Equals(_singlePatientPendingKey, key, StringComparison.OrdinalIgnoreCase))
-                    _singlePatientStablePolls++;
-                else
-                {
-                    _singlePatientPendingKey = key;
-                    _singlePatientStablePolls = 1;
-                }
                 if (_singlePatientStablePolls < 2) return;
 
                 var appointment = Database.FindActiveAppointment(patient, receipt);
