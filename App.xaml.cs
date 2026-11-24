@@ -1,11 +1,9 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Globalization;
 using System.Threading;
 using System.Windows;
 using CefSharp;
-using PatientAppointmentManager.Data;
-using PatientAppointmentManager.Services;
 
 namespace PatientAppointmentManager
 {
@@ -13,30 +11,6 @@ namespace PatientAppointmentManager
     {
         protected override void OnStartup(StartupEventArgs e)
         {
-            // Tác vụ nền được gọi bởi Windows Task Scheduler lúc 16:30.
-            // Chạy trước khi khởi tạo Chromium để tiết kiệm RAM/CPU.
-            if (e.Args != null && Array.Exists(e.Args, a => string.Equals(a, "--scheduled-backup", StringComparison.OrdinalIgnoreCase)))
-            {
-                try
-                {
-                    Database.Initialize();
-                    string result;
-                    SmartBackupService.RunIfChanged(out result);
-                }
-                catch (Exception ex)
-                {
-                    try
-                    {
-                        string folder = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "PatientAppointmentManager");
-                        Directory.CreateDirectory(folder);
-                        File.AppendAllText(System.IO.Path.Combine(folder, "smart-backup.log"), DateTime.Now.ToString("s") + " Scheduled backup ERROR: " + ex + Environment.NewLine);
-                    }
-                    catch { }
-                }
-                Shutdown();
-                return;
-            }
-
             // Chuẩn hóa toàn bộ ngày tháng theo Việt Nam: dd/MM/yyyy.
             var viCulture = new CultureInfo("vi-VN");
             viCulture.DateTimeFormat.ShortDatePattern = "dd/MM/yy";
