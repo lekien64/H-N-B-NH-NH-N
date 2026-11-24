@@ -73,7 +73,41 @@ CREATE TABLE IF NOT EXISTS AuditLog(
     Action TEXT NOT NULL,
     ActionAt TEXT NOT NULL,
     Note TEXT NOT NULL DEFAULT ''
-);";
+);
+
+CREATE TABLE IF NOT EXISTS DataRevision(
+    Id INTEGER PRIMARY KEY CHECK(Id=1),
+    Revision INTEGER NOT NULL DEFAULT 0
+);
+INSERT OR IGNORE INTO DataRevision(Id, Revision) VALUES(1, 0);
+
+CREATE TRIGGER IF NOT EXISTS TR_Appointments_Insert AFTER INSERT ON Appointments BEGIN
+    UPDATE DataRevision SET Revision=Revision+1 WHERE Id=1;
+END;
+CREATE TRIGGER IF NOT EXISTS TR_Appointments_Update AFTER UPDATE ON Appointments BEGIN
+    UPDATE DataRevision SET Revision=Revision+1 WHERE Id=1;
+END;
+CREATE TRIGGER IF NOT EXISTS TR_Appointments_Delete AFTER DELETE ON Appointments BEGIN
+    UPDATE DataRevision SET Revision=Revision+1 WHERE Id=1;
+END;
+CREATE TRIGGER IF NOT EXISTS TR_SavedLogins_Insert AFTER INSERT ON SavedLogins BEGIN
+    UPDATE DataRevision SET Revision=Revision+1 WHERE Id=1;
+END;
+CREATE TRIGGER IF NOT EXISTS TR_SavedLogins_Update AFTER UPDATE ON SavedLogins BEGIN
+    UPDATE DataRevision SET Revision=Revision+1 WHERE Id=1;
+END;
+CREATE TRIGGER IF NOT EXISTS TR_SavedLogins_Delete AFTER DELETE ON SavedLogins BEGIN
+    UPDATE DataRevision SET Revision=Revision+1 WHERE Id=1;
+END;
+CREATE TRIGGER IF NOT EXISTS TR_AuditLog_Insert AFTER INSERT ON AuditLog BEGIN
+    UPDATE DataRevision SET Revision=Revision+1 WHERE Id=1;
+END;
+CREATE TRIGGER IF NOT EXISTS TR_AuditLog_Update AFTER UPDATE ON AuditLog BEGIN
+    UPDATE DataRevision SET Revision=Revision+1 WHERE Id=1;
+END;
+CREATE TRIGGER IF NOT EXISTS TR_AuditLog_Delete AFTER DELETE ON AuditLog BEGIN
+    UPDATE DataRevision SET Revision=Revision+1 WHERE Id=1;
+END;";
                     cmd.ExecuteNonQuery();
                 }
 
@@ -507,6 +541,19 @@ VALUES(@id, 'Đổi lịch', @now, @note)";
             }
         }
 
+
+        public static long GetDataRevision()
+        {
+            using (var c = new SQLiteConnection(ConnectionString))
+            {
+                c.Open();
+                using (var cmd = c.CreateCommand())
+                {
+                    cmd.CommandText = "SELECT Revision FROM DataRevision WHERE Id=1";
+                    return Convert.ToInt64(cmd.ExecuteScalar());
+                }
+            }
+        }
 
         public static string BackupDatabase()
         {

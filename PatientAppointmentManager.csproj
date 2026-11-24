@@ -5,7 +5,11 @@
     <UseWPF>true</UseWPF>
     <LangVersion>7.3</LangVersion>
     <RootNamespace>PatientAppointmentManager</RootNamespace>
-    <AssemblyName>PatientAppointmentManager</AssemblyName>
+    <AssemblyName>SoHenBN</AssemblyName>
+    <ApplicationIcon>SoHenBN.ico</ApplicationIcon>
+    <AssemblyTitle>Sổ hẹn BN</AssemblyTitle>
+    <Product>Sổ hẹn BN</Product>
+    <Description>Phần mềm quản lý lịch hẹn bệnh nhân</Description>
     <PlatformTarget>x64</PlatformTarget>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
@@ -17,7 +21,5 @@
   <ItemGroup>
     <PackageReference Include="System.Data.SQLite.Core" Version="1.0.119" />
     <PackageReference Include="CefSharp.Wpf" Version="109.1.110" />
-    <PackageReference Include="Google.Apis.Drive.v3" Version="1.68.0.3404" />
-    <PackageReference Include="Google.Apis.Auth" Version="1.68.0" />
   </ItemGroup>
 </Project>
